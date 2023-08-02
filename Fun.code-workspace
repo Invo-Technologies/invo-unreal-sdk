@@ -1,0 +1,21 @@
+{
+	"folders": [
+		{
+			"name": "Fun",
+			"path": "."
+		},
+		{
+			"name": "UE5",
+			"path": "D:\\UnrealEngine"
+		}
+	],
+	"settings": {
+		"typescript.tsc.autoDetect": "off"
+	},
+	"extensions": {
+		"recommendations": [
+			"ms-vscode.cpptools",
+			"ms-dotnettools.csharp"
+		]
+	}
+}

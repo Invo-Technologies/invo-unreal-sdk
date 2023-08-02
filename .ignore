@@ -1,0 +1,16 @@
+/.vs
+/.vscode
+/Content
+/DerivedDataCache
+/Exported
+/Intermediate
+/Platforms
+/Saved
+/Plugins/FunPlugin/Content
+/Plugins/FunPlugin/Intermediate
+/Plugins/NoCodePlugin/Content
+/Plugins/NoCodePlugin/Intermediate
+/Plugins/XPlugin/Content
+/Plugins/XPlugin/Intermediate
+/Plugins/XPlugin/lib
+/Plugins/XPlugin/ThirdParty

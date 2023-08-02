@@ -1,0 +1,38 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "{03F0DD8B-474D-5426-5F98-D3936C02E60D}",
+	"Category": "",
+	"Description": "",
+	"Modules": [
+		{
+			"Name": "Fun",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "ModelingToolsEditorMode",
+			"Enabled": true,
+			"TargetAllowList": [
+				"Editor"
+			]
+		},
+		{
+			"Name": "NoCodePlugin",
+			"Enabled": false
+		},
+		{
+			"Name": "XPlugin",
+			"Enabled": false
+		},
+		{
+			"Name": "FunPlugin",
+			"Enabled": false
+		},
+		{
+			"Name": "WebBrowserWidget",
+			"Enabled": true
+		}
+	]
+}
