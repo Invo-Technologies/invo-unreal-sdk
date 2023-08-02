@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--GearVR plugin additions-->
+<root xmlns:android="http://schemas.android.com/apk/res/android">
+	<!-- init section is always evaluated once per architecture -->
+   <uses-permission android:name="android.permission.INTERNET"/>
+
+   
+	<trace enable="true"/>
+	<init>
+		<log text="FacebookSDK init"/>		
+	</init>
+
+  <androidManifestUpdates>
+    <addElements tag="application">
+	
+       <meta-data android:name="com.facebook.sdk.ApplicationId" android:value="@string/facebook_app_id"/>
+	  
+	  <activity android:name="com.facebook.FacebookActivity"
+          android:configChanges="keyboard|keyboardHidden|screenLayout|screenSize|orientation"
+          android:label="@string/app_name" /> 
+
+      <!-- Replace with your Facebook APP_ID -->
+     <provider android:authorities="com.facebook.app.FacebookContentProvider176790743610045"
+          android:name="com.facebook.FacebookContentProvider"
+          android:exported="true" />
+           
+		  
+    </addElements>
+
+	<addPermission android:name="android.permission.INTERNET" />
+
+
+		
+  </androidManifestUpdates>
+
+  <!-- optional additions to proguard -->
+  <proguardAdditions>
+    <insert><![CDATA[
+     -keep class com.facebook.** {
+      *;
+      }
+      -keepattributes Signature
+      -dontskipnonpubliclibraryclassmembers
+
+     -keepclassmembers class com.epicgames.ue4.GameActivity {
+            public <methods>;
+            public <fields>;
+     }
+    ]]></insert>
+  </proguardAdditions>
+
+  <resourceCopies>
+    <!-- Copy the generated resource file to be packaged -->
+     <copyFile src="$S(PluginDir)/../../lib/Android/res/values/FacebookAppID.xml" dst="$S(BuildDir)/res/values/FacebookAppID.xml" /> 
+    <!-- <copyFile src="$S(PluginDir)/../../lib/Android/bolts-android-1.1.2.jar" dst="$S(BuildDir)/libs/bolts-android-1.1.2.jar" /> -->
+    <!-- <copyFile src="$S(PluginDir)/../../lib/Android/bolts-applinks-1.4.0.jar" dst="$S(BuildDir)/libs/bolts-applinks-1.4.0.jar" /> -->
+  </resourceCopies>
+
+
+
+  <AARImports>
+
+
+	<insertValue value="com.facebook.android,facebook-android-sdk,4.26.0" />
+    <insertNewline/>
+
+	 <insertValue value="repository $S(PluginDir)/ThirdParty/Android"/>
+    <insertNewline/>
+
+	<!-- <insertValue value="com.facebook,Facebook,4.18.0"/>
+    <insertNewline/> -->
+
+	<!-- <insertValue value="repository $S(PluginDir)/ThirdParty/Android"/>
+    <insertNewline/> -->
+
+    <!-- <insertValue value="repository $S(PluginDir)/ThirdParty/repository"/>
+    <insertNewline/> --> -->
+
+	  <!-- <insertValue value="repository $S(PluginDir)/../../ThirdParty/Android"/>
+    <insertNewline/> -->
+
+	
+
+    <!-- <insert>com.facebook,Facebook,4.18.0</insert> -->
+
+	
+
+  </AARImports>
+  
+  <!-- optional additions to the GameActivity imports in GameActivity.java -->
+	<gameActivityImportAdditions>
+	<insert>
+    import com.facebook.FacebookSdk;
+    import com.facebook.appevents.AppEventsLogger;
+	  //import com.facebook.login.LoginResult;
+	  //import com.facebook.login.LoginManager;
+	  //import com.facebook.FacebookCallback;
+	  //import com.facebook.CallbackManager;
+	  //import com.facebook.FacebookException;
+	  //import com.facebook.AccessToken;
+    //import com.facebook.share.model.AppInviteContent;
+    //import com.facebook.share.widget.AppInviteDialog;
+    //import com.facebook.share.model.SharePhoto;
+    //import com.facebook.share.model.SharePhotoContent;
+    //import com.facebook.share.model.ShareLinkContent;
+    //import com.facebook.share.widget.ShareDialog;
+    //import com.facebook.AccessTokenTracker;
+    //import com.facebook.HttpMethod;
+    //import com.facebook.Profile;
+    //import com.facebook.ProfileTracker;
+    //import com.facebook.applinks.AppLinkData;
+    //import bolts.AppLinks;
+    //import bolts.AppLink;
+    //import bolts.Task;
+    //import bolts.Bolts;
+	  
+	  //import java.util.HashSet;
+	  //import java.util.Arrays;
+	  //import android.text.TextUtils;
+    //import android.graphics.BitmapFactory; 
+    //import android.os.Handler; 
+
+
+   		 import java.util.HashSet;
+		import java.util.Arrays;
+		import android.text.TextUtils;
+		import android.graphics.BitmapFactory; 
+		import android.os.Handler; 
+
+    </insert>
+	</gameActivityImportAdditions>
+	
+
+	<!-- optional additions to the GameActivity class in GameActivity.java -->
+	<gameActivityClassAdditions>
+	<insert>
+    <![CDATA[
+   
+   
+		//Simply shows a toast text
+		 
+		public void AndroidThunkJava_AndroidAPI_ShowToast(String toast) {
+			//Toast.makeText(getActivity(), toast, Toast.LENGTH_LONG).show();
+		}
+
+    
+    ]]></insert>
+	</gameActivityClassAdditions>
+	
+	<!-- optional additions to GameActivity onCreate metadata reading in GameActivity.java -->
+	<gameActivityReadMetadataAdditions>
+	<insert>
+
+  </insert>
+	</gameActivityReadMetadataAdditions>
+	
+	<!-- optional additions to GameActivity onCreate in GameActivity.java -->
+	<gameActivityOnCreateAdditions>
+	<insert><![CDATA[
+   
+     // Initialize the SDK before executing any other operations,
+	 	Log.debug(" Starting to init Facebook SDK !");
+
+    FacebookSdk.sdkInitialize(getApplicationContext());
+	FacebookSdk.setAutoLogAppEventsEnabled(true);
+	FacebookSdk.setIsDebugEnabled(true);
+	//FacebookSdk.addLoggingBehavior(LoggingBehavior.APP_EVENTS);
+  
+   	AppEventsLogger appEventsLogger = AppEventsLogger.newLogger(this);
+    appEventsLogger.logEvent("RiaAndroid");
+
+	
+    AppEventsLogger.activateApp(getApplication());
+	//AppEventsLogger.logPurchase(BigDecimal.valueOf(5.99), Currency.getInstance("USD"));
+	Log.debug("FacebookSdk.sdkInitialize");
+	Log.debug("Facebook SDK success!");
+  
+	  
+	]]></insert>
+	</gameActivityOnCreateAdditions>
+
+
+
+	<!-- optional additions to GameActivity onDestroy in GameActivity.java -->
+	<gameActivityOnDestroyAdditions>
+		<insert>
+    // accessTokenTracker.stopTracking();
+		// profileTracker.stopTracking();
+		</insert>
+	</gameActivityOnDestroyAdditions>
+	
+	
+	<!-- optional additions to GameActivity onStart in GameActivity.java -->
+	<gameActivityOnStartAdditions>
+		<insert>
+		
+		</insert>
+	</gameActivityOnStartAdditions>
+
+	<!-- optional additions to GameActivity onStop in GameActivity.java -->
+	<gameActivityOnStopAdditions>
+		<insert>
+		
+		</insert>
+	</gameActivityOnStopAdditions>
+	
+
+	<!-- optional additions to GameActivity onPause in GameActivity.java	-->
+	<gameActivityOnPauseAdditions>
+		<insert>
+		// Call the 'deactivateApp' method to log an app event for use in analytics and advertising //reporting.
+        //AppEventsLogger.deactivateApp(getApplication());
+		</insert>
+	</gameActivityOnPauseAdditions>
+
+
+	<!-- optional additions to GameActivity onResume in GameActivity.java	-->
+	<gameActivityOnResumeAdditions>
+		<insert>
+		// Call the 'deactivateApp' method to log an app event for use in analytics and advertising reporting.
+        //AppEventsLogger.deactivateApp(getApplication());
+		</insert>
+	</gameActivityOnResumeAdditions>
+
+
+	<!-- optional additions to GameActivity onActivityResult in GameActivity.java -->
+	<gameActivityOnActivityResultAdditions>
+		<insert>
+	  //  if (callbackManager != null)
+	  //  {
+		//   callbackManager.onActivityResult(requestCode, resultCode, data);
+	  //  }
+		</insert>
+    </gameActivityOnActivityResultAdditions>
+	
+
+	<!-- optional libraries to load in GameActivity.java before libUE4.so -->
+	<soLoadLibrary>
+		<!-- need this if plugin enabled and supported architecture, even if not packaged for GearVR -->
+	<!-- 	<if condition="bSupported">
+			<true>
+				<loadLibrary name="vrapi" failmsg="GearVR library not loaded and required!" />
+			</true>
+		</if> -->
+	</soLoadLibrary>
+</root>
