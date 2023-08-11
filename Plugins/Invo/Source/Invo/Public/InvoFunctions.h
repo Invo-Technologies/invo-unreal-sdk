@@ -315,6 +315,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Invo")
 	static void GetInvoEthBlockNumberBP(FOnInvoAPICallCompleted OnBlockNumberReceived);
 
+	UFUNCTION(BlueprintCallable, Category = "Invo")
+	static void RegisterInvoGameDevBP(FOnInvoAPICallCompleted OnRegisteredDatabaseReceived);
+
 private:
 
 	static void MakeHttpRequest(const FString& Url, const FString& Method, FString& JsonData, TFunction<void(TSharedPtr<FJsonObject>)> Callback);
@@ -340,6 +343,13 @@ private:
 	static TSharedRef<SWindow> Window;
 
 	static void GetInvoEthBlockNumber(TFunction<void(const FString&)> OnBlockNumberReceived);
+
+	static void RegisterInvoGameDev(TFunction<void(const FString&)> OnRegisteredDatabaseReceived);
+
+	/**
+	* This is for postgressSQL connections.
+	**/
+
 
 	//static TSharedRef<FJsonObject> JsonObjectTest;
 

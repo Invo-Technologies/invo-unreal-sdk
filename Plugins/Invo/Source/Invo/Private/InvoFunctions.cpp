@@ -60,6 +60,21 @@
 #include "Engine/Engine.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
 
+#include "Runtime/SlateCore/Public/Widgets/SWindow.h"
+
+
+//#include "Engine/Plugins/Runtime/Database/DatabaseSupport/Public/DatabaseSupport.h"
+
+// Postgres
+//#include "Engine/Plugins/Runtime/Database/DatabaseSupport/SourceDatabaseSupport/Public/Database.h"
+
+//#include "DatabaseSupport/Public/DatabaseSupport.h"
+
+//#include "Plugins/Runtime/Database/DatabaseSupport/Source/DatabaseSupport/Public/Database.h"
+
+//#include "Plugins/Runtime/Database/DatabaseSupport/Source/DatabaseSupport/Public/DatabaseSupport.h"
+
+
 // Initialize the static shared references
 TSharedRef<SWebBrowser> UInvoFunctions::WebBrowser = SNew(SWebBrowser);
 TSharedRef<SWindow> UInvoFunctions::Window = SNew(SWindow);
@@ -970,5 +985,40 @@ void UInvoFunctions::GetInvoEthBlockNumber(TFunction<void(const FString&)> OnBlo
 				FString BlockNumber = JsonObject->GetStringField("result");
 				OnBlockNumberReceived(BlockNumber);
 			}
+		});
+}
+
+void UInvoFunctions::RegisterInvoGameDev(TFunction<void(const FString&)> OnRegisteredDatabaseReceived)
+{
+	// Create a connection to the database
+	// Assuming global connection to the database is already established
+	//pqxx::connection c("dbname=my_first_database user=postgres password=1234");
+
+	FString RegisterDataBaseEndpoint = FString::Printf(TEXT("http://127.0.0.1:3030/register"));
+	FString HttpMethod = "POST";
+	FString JsonData = TEXT("{\"name\":\"Alex Kissi\"}");
+
+	//Call the existing MakeHttpRequest function with the blockchain URL, HTTP method, and JSON data
+	MakeHttpRequest(RegisterDataBaseEndpoint, HttpMethod, JsonData, [OnRegisteredDatabaseReceived](TSharedPtr<FJsonObject> JsonObject)
+		{
+			if (JsonObject.IsValid() && JsonObject->HasField("name"))
+			{
+				// Get the result (block number) from the JSON response
+				FString BlockNumber = JsonObject->GetStringField("name");
+				OnRegisteredDatabaseReceived(BlockNumber);
+			}
+		});
+
+}
+
+void UInvoFunctions::RegisterInvoGameDevBP(FOnInvoAPICallCompleted OnRegisteredDatabaseReceived)
+{
+	RegisterInvoGameDev([OnRegisteredDatabaseReceived](const FString& Result)
+		{
+			// Assign the result to the output parameter
+			//BlockNumber = Result;
+			bool bSuccess = true;
+			UE_LOG(LogTemp, Warning, TEXT("Datbase test %s"), *Result);
+			OnRegisteredDatabaseReceived.ExecuteIfBound(bSuccess);
 		});
 }
