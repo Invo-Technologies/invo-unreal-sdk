@@ -779,6 +779,7 @@ void UInvoFunctions::MakeHttpRequest(const FString& Url, const FString& Method, 
 					TSharedPtr<FJsonObject> JsonObject = MakeShared<FJsonObject>();
 					if (FJsonSerializer::Deserialize(Reader, JsonObject))
 					{
+
 						// Successful API call and JSON parsing
 						Callback(JsonObject);
 					}
@@ -996,16 +997,41 @@ void UInvoFunctions::RegisterInvoGameDev(TFunction<void(const FString&)> OnRegis
 
 	FString RegisterDataBaseEndpoint = FString::Printf(TEXT("http://127.0.0.1:3030/register"));
 	FString HttpMethod = "POST";
-	FString JsonData = TEXT("{\"name\":\"Alex Kissi\"}");
+
+
+	const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
+	auto DeveloperRegistrationInfo = Settings->DeveloperRegistrationInfo;
+	auto GameNme = DeveloperRegistrationInfo.GameName;
+
+	// Create a JSON object
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	JsonObject->SetStringField("name", GameNme);
+
+	// Convert JSON object to string
+	FString JsonData;
+	TSharedRef<TJsonWriter<>> JsonWriter = TJsonWriterFactory<>::Create(&JsonData);
+	FJsonSerializer::Serialize(JsonObject.ToSharedRef(), JsonWriter);
+	UE_LOG(LogTemp, Warning, TEXT("Testing %s"), *JsonData);
 
 	//Call the existing MakeHttpRequest function with the blockchain URL, HTTP method, and JSON data
 	MakeHttpRequest(RegisterDataBaseEndpoint, HttpMethod, JsonData, [OnRegisteredDatabaseReceived](TSharedPtr<FJsonObject> JsonObject)
-		{
-			if (JsonObject.IsValid() && JsonObject->HasField("name"))
+		{	
+			
+			if (JsonObject.IsValid() )
 			{
 				// Get the result (block number) from the JSON response
-				FString BlockNumber = JsonObject->GetStringField("name");
+				//UE_LOG(LogTemp, Warning, TEXT("Works %s"), *JsonData);
+				FString BlockNumber = JsonObject->GetStringField("message");
+				FString Message = FString::Printf(TEXT("Works %s "), *BlockNumber);
+				GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Green, Message);
 				OnRegisteredDatabaseReceived(BlockNumber);
+			}
+			else
+			{
+				//UE_LOG(LogTemp, Warning, TEXT("Some Error %s"), *JsonData);
+				FString Message = FString::Printf(TEXT("Problem register "));
+				GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Red, Message);
+
 			}
 		});
 
