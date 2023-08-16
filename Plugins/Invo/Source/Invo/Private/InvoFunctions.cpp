@@ -1005,7 +1005,17 @@ void UInvoFunctions::RegisterInvoGameDev(TFunction<void(const FString&)> OnRegis
 
 	// Create a JSON object
 	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
-	JsonObject->SetStringField("name", GameNme);
+	JsonObject->SetStringField("name_or_company_name", DeveloperRegistrationInfo.DeveloperName);
+	JsonObject->SetStringField("contact_email", DeveloperRegistrationInfo.ContactEmail);
+	JsonObject->SetStringField("phone_number", DeveloperRegistrationInfo.PhoneNumber);
+	JsonObject->SetStringField("city", DeveloperRegistrationInfo.City);
+	JsonObject->SetStringField("state", DeveloperRegistrationInfo.State);
+	JsonObject->SetStringField("country", DeveloperRegistrationInfo.Country);
+	JsonObject->SetStringField("website_url", DeveloperRegistrationInfo.WebsiteURL);
+	JsonObject->SetStringField("tax_identification_number", DeveloperRegistrationInfo.TaxIdentificationNumber);
+	JsonObject->SetStringField("username", DeveloperRegistrationInfo.Username);
+	JsonObject->SetStringField("password", DeveloperRegistrationInfo.Password);
+
 
 	// Convert JSON object to string
 	FString JsonData;
@@ -1016,6 +1026,8 @@ void UInvoFunctions::RegisterInvoGameDev(TFunction<void(const FString&)> OnRegis
 	//Call the existing MakeHttpRequest function with the blockchain URL, HTTP method, and JSON data
 	MakeHttpRequest(RegisterDataBaseEndpoint, HttpMethod, JsonData, [OnRegisteredDatabaseReceived](TSharedPtr<FJsonObject> JsonObject)
 		{	
+
+			/*
 			
 			if (JsonObject.IsValid() )
 			{
@@ -1032,6 +1044,20 @@ void UInvoFunctions::RegisterInvoGameDev(TFunction<void(const FString&)> OnRegis
 				FString Message = FString::Printf(TEXT("Problem register "));
 				GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Red, Message);
 
+			}
+
+			*/
+
+			if (JsonObject.IsValid() && JsonObject->HasField("name_or_company_name"))
+			{
+				FString Message = FString::Printf(TEXT("Registered successfully: %s"), *JsonObject->GetStringField("name_or_company_name"));
+				GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Green, Message);
+				OnRegisteredDatabaseReceived(JsonObject->GetStringField("name_or_company_name"));
+			}
+			else
+			{
+				FString Message = FString::Printf(TEXT("Registration failed."));
+				GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Red, Message);
 			}
 		});
 

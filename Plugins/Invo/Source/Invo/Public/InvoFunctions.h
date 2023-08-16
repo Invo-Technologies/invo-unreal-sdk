@@ -138,6 +138,17 @@ struct FInvoRegistrationInfo
 		FString Address;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
+		FString City;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
+		FString State;
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
+		FString Country;
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
 		FString WebsiteURL;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
