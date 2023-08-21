@@ -28,7 +28,11 @@
 				"TVOS"
 			],
 			"Dependencies": [
-				"WebBrowser"
+				"WebBrowser",
+				"DatabaseSupport"
+			],
+			"AdditionalDependencies": [
+				"DatabaseSupport"
 			]
 		}
 	]

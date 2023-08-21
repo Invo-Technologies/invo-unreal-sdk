@@ -1,4 +1,4 @@
-// @AlexKissiJr for OurInvo  CopyRight 2023 SDK Unreal Engine Uplugin.
+Ôªø// @AlexKissiJr for OurInvo  CopyRight 2023 SDK Unreal Engine Uplugin.
 
 #pragma once
 
@@ -6,9 +6,16 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "InvoFunctions.generated.h"
 
+// Define the plugin version number
+#define INVO_PLUGIN_VERSION "1.0.0"
+
+
 class SWebBrowser;
 class SWindow;
 class FJsonObject;
+
+// For CallBack Functions 
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnInvoAPICallCompleted, bool, bSuccess);
 
 
 UENUM(BlueprintType)
@@ -106,7 +113,7 @@ struct FInvoAssetData
 		ETokenPair TP;
 
 	/**
-	* There is an additional ìReferenceî variable that is the (String) name of their Default_Currency.
+	* There is an additional ‚ÄúReference‚Äù variable that is the (String) name of their Default_Currency.
 	**/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FInvoAssetData")
 		FString RDC;
@@ -129,6 +136,17 @@ struct FInvoRegistrationInfo
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
 		FString Address;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
+		FString City;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
+		FString State;
+
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
+		FString Country;
+
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
 		FString WebsiteURL;
@@ -185,9 +203,6 @@ public:
 		FString BillingAddress;
 };
 
-// For CallBack Functions 
-DECLARE_DYNAMIC_DELEGATE_OneParam(FOnInvoAPICallCompleted, bool, bSuccess);
-
 
 /**
  *
@@ -208,6 +223,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Fun ", meta = (WorldContext = "WorldContextObject"))
 	static bool GetMaxPacket(const UObject* WorldContextObject, int32& OutMaxPacket);
 
+
+	// Get the plugin version number
+	static FString GetInvoPluginVersion();
+
+
+	UFUNCTION(BlueprintCallable, Category = "Invo")
+	static void PrintSDKVersionOnScreen();
 
 	UInvoFunctions(const FObjectInitializer& ObjectInitializer);
 
@@ -243,7 +265,7 @@ public:
 	/**
 	* This is the name of the game's default resource that will be traded on the INVO exchange.
 	* This field will require the Game Developer to instantiate an unsigned integer equivalent to the U.S Dollar
-	* amount of how much their currency is evaluated at in the GAME_IDís trading pair within their Pool_ID.
+	* amount of how much their currency is evaluated at in the GAME_ID‚Äôs trading pair within their Pool_ID.
 	**/
 	UPROPERTY(config, EditAnywhere, Category = Settings)
 	FString Default_Currency;
@@ -301,9 +323,15 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Invo")
 	static void InvoAPICallFunction(FOnInvoAPICallCompleted OnCompleted);
 
+	UFUNCTION(BlueprintCallable, Category = "Invo")
+	static void GetInvoEthBlockNumberBP(FOnInvoAPICallCompleted OnBlockNumberReceived);
+
+	UFUNCTION(BlueprintCallable, Category = "Invo")
+	static void RegisterInvoGameDevBP(FOnInvoAPICallCompleted OnRegisteredDatabaseReceived);
+
 private:
 
-	static void MakeHttpRequest(const FString& Url, const FString& Method, TFunction<void(TSharedPtr<FJsonObject>)> Callback);
+	static void MakeHttpRequest(const FString& Url, const FString& Method, FString& JsonData, TFunction<void(TSharedPtr<FJsonObject>)> Callback);
 
 	static class UNetConnection* Internal_GetNetConnection(const UObject* WorldContextObject);
 
@@ -315,7 +343,7 @@ private:
 
 	static bool CloseWebBrowser(const FString& Message);
 
-	static void InvoAPIJsonReturnCall(const FString& City, TFunction<void(TSharedPtr<FJsonObject>)> Callback);
+	static void InvoAPIJsonReturnCall(const FString& City, FString& JsonData, TFunction<void(TSharedPtr<FJsonObject>)> Callback);
 
 	static void SimulateAPICall(FOnInvoAPICallCompleted OnCompleted);
 
@@ -324,6 +352,15 @@ private:
 
 	static TSharedRef<SWebBrowser> WebBrowser;
 	static TSharedRef<SWindow> Window;
+
+	static void GetInvoEthBlockNumber(TFunction<void(const FString&)> OnBlockNumberReceived);
+
+	static void RegisterInvoGameDev(TFunction<void(const FString&)> OnRegisteredDatabaseReceived);
+
+	/**
+	* This is for postgressSQL connections.
+	**/
+
 
 	//static TSharedRef<FJsonObject> JsonObjectTest;
 

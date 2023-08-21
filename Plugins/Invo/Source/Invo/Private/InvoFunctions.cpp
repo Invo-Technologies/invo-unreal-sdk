@@ -60,11 +60,37 @@
 #include "Engine/Engine.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
 
+#include "Runtime/SlateCore/Public/Widgets/SWindow.h"
+
+
+//#include "Engine/Plugins/Runtime/Database/DatabaseSupport/Public/DatabaseSupport.h"
+
+// Postgres
+//#include "Engine/Plugins/Runtime/Database/DatabaseSupport/SourceDatabaseSupport/Public/Database.h"
+
+//#include "DatabaseSupport/Public/DatabaseSupport.h"
+
+//#include "Plugins/Runtime/Database/DatabaseSupport/Source/DatabaseSupport/Public/Database.h"
+
+//#include "Plugins/Runtime/Database/DatabaseSupport/Source/DatabaseSupport/Public/DatabaseSupport.h"
+
+
 // Initialize the static shared references
 TSharedRef<SWebBrowser> UInvoFunctions::WebBrowser = SNew(SWebBrowser);
 TSharedRef<SWindow> UInvoFunctions::Window = SNew(SWindow);
 
 #define GET_CONNECTION	UNetConnection* PlayerNetConnection = UInvoFunctions::Internal_GetNetConnection(WorldContextObject)
+
+FString UInvoFunctions::GetInvoPluginVersion()
+{
+	return FString(TEXT(INVO_PLUGIN_VERSION));
+}
+
+void UInvoFunctions::PrintSDKVersionOnScreen()
+{
+	FString Version = GetInvoPluginVersion();
+	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green, FString::Printf(TEXT("Invo SDK Version: %s"), *Version));
+}
 
 // Called when the game starts or when spawned
 
@@ -648,8 +674,9 @@ void UInvoFunctions::HandleJavaScriptTestCallback(const FString& Message, TShare
 	{
 		// Handle the button click callback
 		UE_LOG(LogTemp, Log, TEXT("Received JavaScript callback: ButtonClicked"));
+		FString JsonData = TEXT("");
 
-		InvoAPIJsonReturnCall(TEXT("London"), [](TSharedPtr<FJsonObject> JsonObject)
+		InvoAPIJsonReturnCall(TEXT("London"), JsonData, [](TSharedPtr<FJsonObject> JsonObject)
 			{
 				// Do something with JsonObject
 				// This will be called when the HTTP request completes
@@ -684,7 +711,8 @@ void UInvoFunctions::HandleJavaScriptTestCallback(const FString& Message, TShare
 	}
 	else if (Message == "PageB") 
 	{
-		InvoAPIJsonReturnCall(TEXT("San Diego"), [](TSharedPtr<FJsonObject> JsonObject)
+		FString JsonData = TEXT("");
+		InvoAPIJsonReturnCall(TEXT("San Diego"), JsonData, [](TSharedPtr<FJsonObject> JsonObject)
 			{
 				// Do something with JsonObject
 				// This will be called when the HTTP request completes
@@ -717,7 +745,7 @@ bool UInvoFunctions::CloseWebBrowser(const FString& Message)
  }
 
 
-void UInvoFunctions::MakeHttpRequest(const FString& Url, const FString& Method, TFunction<void(TSharedPtr<FJsonObject>)> Callback)
+void UInvoFunctions::MakeHttpRequest(const FString& Url, const FString& Method, FString& JsonData /*= TEXT("")*/, TFunction<void(TSharedPtr<FJsonObject>)> Callback)
 {
 	// Instantiate the HTTP module
 	FHttpModule* HttpModule = &FHttpModule::Get();
@@ -730,20 +758,47 @@ void UInvoFunctions::MakeHttpRequest(const FString& Url, const FString& Method, 
 	HttpRequest->SetHeader(TEXT("User-Agent"), "X-UnrealEngine-Agent");
 	HttpRequest->SetHeader("Content-Type", TEXT("application/json"));
 
+	// Set the JSON data in the request if it's not empty
+	if (!JsonData.IsEmpty())
+	{
+		HttpRequest->SetContentAsString(JsonData);
+	}
+
 	// Bind a lambda function to process the HTTP response
 	HttpRequest->OnProcessRequestComplete().BindLambda([Callback](FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful)
 		{
 			if (bWasSuccessful && Response.IsValid())
 			{
-				// Deserialize the response into a JSON object
-				FString ResponseString = Response->GetContentAsString();
-				TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseString);
-
-				TSharedPtr<FJsonObject> JsonObject = MakeShared<FJsonObject>();
-				if (FJsonSerializer::Deserialize(Reader, JsonObject))
+				// Check the response code
+				if (EHttpResponseCodes::IsOk(Response->GetResponseCode()))
 				{
-					Callback(JsonObject);
+					// Deserialize the response into a JSON object
+					FString ResponseString = Response->GetContentAsString();
+					TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseString);
+
+					TSharedPtr<FJsonObject> JsonObject = MakeShared<FJsonObject>();
+					if (FJsonSerializer::Deserialize(Reader, JsonObject))
+					{
+
+						// Successful API call and JSON parsing
+						Callback(JsonObject);
+					}
+					else
+					{
+						// JSON parsing failed
+						UE_LOG(LogTemp, Error, TEXT("Failed to parse JSON response"));
+					}
 				}
+				else
+				{
+					// Unsuccessful API call
+					UE_LOG(LogTemp, Error, TEXT("API call failed with status code: %d"), Response->GetResponseCode());
+				}
+			}
+			else
+			{
+				// Network-related errors or other issues
+				UE_LOG(LogTemp, Error, TEXT("HTTP request failed"));
 			}
 		});
 
@@ -751,8 +806,7 @@ void UInvoFunctions::MakeHttpRequest(const FString& Url, const FString& Method, 
 	HttpRequest->ProcessRequest();
 }
 
-
-void UInvoFunctions ::InvoAPIJsonReturnCall(const FString& City, TFunction<void(TSharedPtr<FJsonObject>)> Callback)
+void UInvoFunctions ::InvoAPIJsonReturnCall(const FString& City, FString& JsonData, TFunction<void(TSharedPtr<FJsonObject>)> Callback)
 {
 	FJsonObject JsonRespObject;
 
@@ -762,7 +816,7 @@ void UInvoFunctions ::InvoAPIJsonReturnCall(const FString& City, TFunction<void(
 
 	FString Url = FString::Printf(TEXT("https://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s"), *City.Replace(TEXT(" "), TEXT("%20")), *Settings->Game_ID);
 
-	MakeHttpRequest(Url, TEXT("GET"), [Callback](TSharedPtr<FJsonObject> JsonObject)
+	MakeHttpRequest(Url, TEXT("GET"),JsonData,[Callback](TSharedPtr<FJsonObject> JsonObject)
 	{
 		if (JsonObject.IsValid())
 		{
@@ -779,7 +833,8 @@ void UInvoFunctions ::InvoAPIJsonReturnCall(const FString& City, TFunction<void(
 
 void UInvoFunctions::GetInvoFunctionOne(FOnInvoAPICallCompleted OnCompleted)
 {
-	InvoAPIJsonReturnCall(TEXT("Los Angeles"), [OnCompleted](TSharedPtr<FJsonObject> JsonObject)
+	FString JsonData = TEXT("");
+	InvoAPIJsonReturnCall(TEXT("Los Angeles"), JsonData, [OnCompleted](TSharedPtr<FJsonObject> JsonObject)
 		{
 			// Do something with JsonObject
 			// This will be called when the HTTP request completes
@@ -808,7 +863,8 @@ void UInvoFunctions::GetInvoFunctionOne(FOnInvoAPICallCompleted OnCompleted)
 
 void UInvoFunctions::GetInvoFunctionTwo(FOnInvoAPICallCompleted OnCompleted)
 {
-	InvoAPIJsonReturnCall(TEXT("San Diego"), [OnCompleted](TSharedPtr<FJsonObject> JsonObject)
+	FString JsonData = TEXT("");
+	InvoAPIJsonReturnCall(TEXT("San Diego"),JsonData, [OnCompleted](TSharedPtr<FJsonObject> JsonObject)
 		{
 			// Do something with JsonObject
 				// This will be called when the HTTP request completes
@@ -838,7 +894,8 @@ void UInvoFunctions::GetInvoFunctionTwo(FOnInvoAPICallCompleted OnCompleted)
 
 void UInvoFunctions::GetInvoFunctionThree(FOnInvoAPICallCompleted OnCompleted)
 {
-	InvoAPIJsonReturnCall(TEXT("London"), [OnCompleted](TSharedPtr<FJsonObject> JsonObject)
+	FString JsonData = TEXT("");
+	InvoAPIJsonReturnCall(TEXT("London"), JsonData, [OnCompleted](TSharedPtr<FJsonObject> JsonObject)
 	{
 			// Do something with JsonObject
 				// This will be called when the HTTP request completes
@@ -894,4 +951,126 @@ void UInvoFunctions::SimulateAPICall(FOnInvoAPICallCompleted OnCompleted)
 		World->GetTimerManager().SetTimer(TimerHandle, TimerDelegate, DelaySeconds, false);
 	}
 
+}
+
+
+void UInvoFunctions::GetInvoEthBlockNumberBP(FOnInvoAPICallCompleted OnBlockNumberReceived)
+{
+	// Call the existing GetInvoEthBlockNumber function and pass a lambda to handle the result
+	GetInvoEthBlockNumber([OnBlockNumberReceived](const FString& Result)
+		{
+			// Assign the result to the output parameter
+			//BlockNumber = Result;
+			bool bSuccess = true;
+			UE_LOG(LogTemp, Warning, TEXT("Block Chain test %s"), *Result);
+			OnBlockNumberReceived.ExecuteIfBound(bSuccess);
+		});
+
+}
+
+void UInvoFunctions::GetInvoEthBlockNumber(TFunction<void(const FString&)> OnBlockNumberReceived)
+{
+	FString APIKey = "cb539443ebed4038bd4ae05f5223e49a";
+	FString BlockchainUrl = FString::Printf(TEXT("https://mainnet.infura.io/v3/%s"), *APIKey);
+	FString HttpMethod = "POST";
+	
+	// The JSON data to send in the request
+	FString JsonData = TEXT("{\"jsonrpc\":\"2.0\",\"method\":\"eth_blockNumber\",\"params\":[],\"id\":1}");
+	
+	 //Call the existing MakeHttpRequest function with the blockchain URL, HTTP method, and JSON data
+	MakeHttpRequest(BlockchainUrl, HttpMethod, JsonData, [OnBlockNumberReceived](TSharedPtr<FJsonObject> JsonObject)
+		{
+			if (JsonObject.IsValid() && JsonObject->HasField("result"))
+			{
+				// Get the result (block number) from the JSON response
+				FString BlockNumber = JsonObject->GetStringField("result");
+				OnBlockNumberReceived(BlockNumber);
+			}
+		});
+}
+
+void UInvoFunctions::RegisterInvoGameDev(TFunction<void(const FString&)> OnRegisteredDatabaseReceived)
+{
+	// Create a connection to the database
+	// Assuming global connection to the database is already established
+	//pqxx::connection c("dbname=my_first_database user=postgres password=1234");
+
+	FString RegisterDataBaseEndpoint = FString::Printf(TEXT("http://127.0.0.1:3030/register"));
+	FString HttpMethod = "POST";
+
+
+	const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
+	auto DeveloperRegistrationInfo = Settings->DeveloperRegistrationInfo;
+	auto GameNme = DeveloperRegistrationInfo.GameName;
+
+	// Create a JSON object
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	JsonObject->SetStringField("name_or_company_name", DeveloperRegistrationInfo.DeveloperName);
+	JsonObject->SetStringField("contact_email", DeveloperRegistrationInfo.ContactEmail);
+	JsonObject->SetStringField("phone_number", DeveloperRegistrationInfo.PhoneNumber);
+	JsonObject->SetStringField("city", DeveloperRegistrationInfo.City);
+	JsonObject->SetStringField("state", DeveloperRegistrationInfo.State);
+	JsonObject->SetStringField("country", DeveloperRegistrationInfo.Country);
+	JsonObject->SetStringField("website_url", DeveloperRegistrationInfo.WebsiteURL);
+	JsonObject->SetStringField("tax_identification_number", DeveloperRegistrationInfo.TaxIdentificationNumber);
+	JsonObject->SetStringField("username", DeveloperRegistrationInfo.Username);
+	JsonObject->SetStringField("password", DeveloperRegistrationInfo.Password);
+
+
+	// Convert JSON object to string
+	FString JsonData;
+	TSharedRef<TJsonWriter<>> JsonWriter = TJsonWriterFactory<>::Create(&JsonData);
+	FJsonSerializer::Serialize(JsonObject.ToSharedRef(), JsonWriter);
+	UE_LOG(LogTemp, Warning, TEXT("Testing %s"), *JsonData);
+
+	//Call the existing MakeHttpRequest function with the blockchain URL, HTTP method, and JSON data
+	MakeHttpRequest(RegisterDataBaseEndpoint, HttpMethod, JsonData, [OnRegisteredDatabaseReceived](TSharedPtr<FJsonObject> JsonObject)
+		{	
+
+			/*
+			
+			if (JsonObject.IsValid() )
+			{
+				// Get the result (block number) from the JSON response
+				//UE_LOG(LogTemp, Warning, TEXT("Works %s"), *JsonData);
+				FString BlockNumber = JsonObject->GetStringField("message");
+				FString Message = FString::Printf(TEXT("Works %s "), *BlockNumber);
+				GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Green, Message);
+				OnRegisteredDatabaseReceived(BlockNumber);
+			}
+			else
+			{
+				//UE_LOG(LogTemp, Warning, TEXT("Some Error %s"), *JsonData);
+				FString Message = FString::Printf(TEXT("Problem register "));
+				GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Red, Message);
+
+			}
+
+			*/
+
+			if (JsonObject.IsValid() && JsonObject->HasField("name_or_company_name"))
+			{
+				FString Message = FString::Printf(TEXT("Registered successfully: %s"), *JsonObject->GetStringField("name_or_company_name"));
+				GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Green, Message);
+				OnRegisteredDatabaseReceived(JsonObject->GetStringField("name_or_company_name"));
+			}
+			else
+			{
+				FString Message = FString::Printf(TEXT("Registration failed."));
+				GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Red, Message);
+			}
+		});
+
+}
+
+void UInvoFunctions::RegisterInvoGameDevBP(FOnInvoAPICallCompleted OnRegisteredDatabaseReceived)
+{
+	RegisterInvoGameDev([OnRegisteredDatabaseReceived](const FString& Result)
+		{
+			// Assign the result to the output parameter
+			//BlockNumber = Result;
+			bool bSuccess = true;
+			UE_LOG(LogTemp, Warning, TEXT("Datbase test %s"), *Result);
+			OnRegisteredDatabaseReceived.ExecuteIfBound(bSuccess);
+		});
 }
