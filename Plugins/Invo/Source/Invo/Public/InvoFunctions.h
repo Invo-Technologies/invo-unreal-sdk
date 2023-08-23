@@ -126,56 +126,65 @@ struct FInvoRegistrationInfo
 	GENERATED_BODY()
 
 		UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
-		FString DeveloperName;
+		FString UserType;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
+		UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
+		FString CompanyName;
+
+		UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
 		FString ContactEmail;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
-		FString PhoneNumber;
+		UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
+		FString CompanyContactNumber;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
-		FString Address;
+		UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
+		FString CompanyContact;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
-		FString City;
+		UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
+		FString CompanyAddress1;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
-		FString State;
+		UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
+		FString CompanyCity;
+
+		UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
+		FString CompanyZipcode;
+
+		UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
+		FString CompanyState;
 
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
+		UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
 		FString Country;
 
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
+		UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
 		FString WebsiteURL;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
+		UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
 		FString TaxIdentificationNumber;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
+		UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
 		FString Username;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
+		UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
 		FString Password;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Game Registration Info")
+		UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Game Registration Info")
 		FString GameName;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Game Registration Info")
+		UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Game Registration Info")
 		FString GameDescription;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Game Registration Info")
+		UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Game Registration Info")
 		FString Genre;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Game Registration Info")
+		UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Game Registration Info")
 		FString Platform;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Game Registration Info")
+		UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Game Registration Info")
 		FString ReleaseDate;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Game Registration Info")
+		UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Game Registration Info")
 		FString GameURL;
 };
 
