@@ -1052,3 +1052,103 @@ void UInvoFunctions::RegisterInvoGameDevBP(FOnInvoAPICallCompleted OnRegisteredD
 			OnRegisteredDatabaseReceived.ExecuteIfBound(bSuccess);
 		});
 }
+
+void UInvoFunctions::TransferCurrency(int64 SourceGameID, int64 SourcePlayerID, int64 TargetGameID, int64 TargetPlayerID, float Amount, FString CurrencyName, TFunction<void(const FString&)> OnTransferCompleted)
+{
+	// Endpoint and HTTP Method
+	FString TransferEndpoint = FString::Printf(TEXT("http://127.0.0.1:3030/transfer"));
+	FString HttpMethod = "POST";
+
+	// Create a JSON object for the transfer details
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	JsonObject->SetNumberField("source_game_id", SourceGameID);
+	JsonObject->SetNumberField("source_player_id", SourcePlayerID);
+	JsonObject->SetNumberField("target_game_id", TargetGameID);
+	JsonObject->SetNumberField("target_player_id", TargetPlayerID);
+	JsonObject->SetNumberField("amount", Amount);
+	JsonObject->SetStringField("currency_name", CurrencyName);
+
+	// Convert JSON object to string
+	FString JsonData;
+	TSharedRef<TJsonWriter<>> JsonWriter = TJsonWriterFactory<>::Create(&JsonData);
+	FJsonSerializer::Serialize(JsonObject.ToSharedRef(), JsonWriter);
+
+	// Call the existing MakeHttpRequest function
+	MakeHttpRequest(TransferEndpoint, HttpMethod, JsonData, [OnTransferCompleted](TSharedPtr<FJsonObject> JsonObject)
+		{
+			// Handle the response
+			if (JsonObject.IsValid() && JsonObject->HasField("status") && JsonObject->GetStringField("status") == "success")
+			{
+				FString Message = FString::Printf(TEXT("Transfer successful: %s"), *JsonObject->GetStringField("message"));
+				GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Green, Message);
+				OnTransferCompleted(JsonObject->GetStringField("message"));
+			}
+			else
+			{
+				FString Message = FString::Printf(TEXT("Transfer failed."));
+				GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Red, Message);
+				OnTransferCompleted(TEXT("Failed"));
+			}
+		});
+}
+
+
+void UInvoFunctions::TransferCurrencyBP(int64 SourceGameID, int64 SourcePlayerID, int64 TargetGameID, int64 TargetPlayerID, float Amount, FString CurrencyName, FOnInvoAPICallCompleted OnTransferCompleted)
+{
+	TransferCurrency(SourceGameID, SourcePlayerID, TargetGameID, TargetPlayerID, Amount, CurrencyName, [OnTransferCompleted](const FString& Result)
+		{
+			bool bSuccess = Result == "Currency transferred successfully";
+			OnTransferCompleted.ExecuteIfBound(bSuccess);
+		});
+}
+
+
+void UInvoFunctions::FetchCurrenciesForUser(int64 GameID, int64 PlayerID, TFunction<void(const TArray<FCurrencyData>&)> OnCurrenciesFetched)
+{
+	FString FetchCurrenciesEndpoint = FString::Printf(TEXT("http://127.0.0.1:3030/currencies?game_id=%lld&player_id=%lld"), GameID, PlayerID);
+	FString HttpMethod = "GET";
+	FString None = "";
+
+	// Make the HTTP request
+	MakeHttpRequest(FetchCurrenciesEndpoint, HttpMethod, None, [OnCurrenciesFetched](TSharedPtr<FJsonObject> JsonObject)
+		{
+			if (JsonObject.IsValid() && JsonObject->HasTypedField<EJson::Array>("currencies"))
+			{
+				const TArray<TSharedPtr<FJsonValue>>& CurrenciesArray = JsonObject->GetArrayField("currencies");
+
+				TArray<FCurrencyData> Currencies;
+
+				for (const TSharedPtr<FJsonValue>& CurrencyValue : CurrenciesArray)
+				{
+					TSharedPtr<FJsonObject> CurrencyObject = CurrencyValue->AsObject();
+
+					FCurrencyData Currency;
+					Currency.CurrencyID = CurrencyObject->GetStringField("currency_id");
+					Currency.GameID = CurrencyObject->GetStringField("game_id");
+					Currency.UserID = CurrencyObject->GetStringField("user_id");
+					Currency.CurrencyName = CurrencyObject->GetStringField("currency_name");
+					Currency.CurrencyAmount = CurrencyObject->GetStringField("currency_amount");
+
+					// ... Extract any other fields you need ...
+
+					Currencies.Add(Currency);
+				}
+
+				OnCurrenciesFetched(Currencies);
+			}
+			else
+			{
+				TArray<FCurrencyData> EmptyArray;
+				OnCurrenciesFetched(EmptyArray);
+			}
+		});
+}
+
+
+void UInvoFunctions::FetchCurrenciesForUserBP(int64 GameID, int64 PlayerID, FFetchCurrenciesCompleted Completed)
+{
+	FetchCurrenciesForUser(GameID, PlayerID, [Completed](const TArray<FCurrencyData>& Currencies)
+		{
+			Completed.ExecuteIfBound(Currencies);
+		});
+}

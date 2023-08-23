@@ -119,6 +119,32 @@ struct FInvoAssetData
 		FString RDC;
 };
 
+USTRUCT(BlueprintType)
+struct FCurrencyData
+{
+	GENERATED_BODY()
+
+		UPROPERTY(BlueprintReadOnly)
+		FString CurrencyID;
+		
+		UPROPERTY(BlueprintReadOnly)
+			FString GameID;
+		
+		UPROPERTY(BlueprintReadOnly)
+			FString UserID;
+		
+		UPROPERTY(BlueprintReadOnly)
+			FString CurrencyName;
+		
+		UPROPERTY(BlueprintReadOnly)
+			FString CurrencyAmount;
+
+	// ... Add any other fields you need, based on your database schema ...
+};
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(FFetchCurrenciesCompleted, const TArray<FCurrencyData>&, Currencies);
+
+
 
 USTRUCT(BlueprintType)
 struct FInvoRegistrationInfo
@@ -338,6 +364,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Invo")
 	static void RegisterInvoGameDevBP(FOnInvoAPICallCompleted OnRegisteredDatabaseReceived);
 
+	// Blueprint function for transferring currency
+	UFUNCTION(BlueprintCallable, Category = "Invo")
+	static void TransferCurrencyBP(int64 SourceGameID, int64 SourcePlayerID, int64 TargetGameID, int64 TargetPlayerID, float Amount, FString CurrencyName, FOnInvoAPICallCompleted OnTransferCompleted);
+
+	UFUNCTION(BlueprintCallable, Category = "Invo")
+	static void FetchCurrenciesForUserBP(int64 GameID, int64 PlayerID, FFetchCurrenciesCompleted Completed);
+
 private:
 
 	static void MakeHttpRequest(const FString& Url, const FString& Method, FString& JsonData, TFunction<void(TSharedPtr<FJsonObject>)> Callback);
@@ -365,6 +398,10 @@ private:
 	static void GetInvoEthBlockNumber(TFunction<void(const FString&)> OnBlockNumberReceived);
 
 	static void RegisterInvoGameDev(TFunction<void(const FString&)> OnRegisteredDatabaseReceived);
+
+	static void TransferCurrency(int64 SourceGameID, int64 SourcePlayerID, int64 TargetGameID, int64 TargetPlayerID, float Amount, FString CurrencyName, TFunction<void(const FString&)> OnTransferCompleted);
+
+	static void FetchCurrenciesForUser(int64 GameID, int64 PlayerID, TFunction<void(const TArray<FCurrencyData>&)> OnCurrenciesFetched);
 
 	/**
 	* This is for postgressSQL connections.
