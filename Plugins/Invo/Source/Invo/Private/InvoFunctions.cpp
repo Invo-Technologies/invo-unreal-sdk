@@ -1152,3 +1152,42 @@ void UInvoFunctions::FetchCurrenciesForUserBP(int64 GameID, int64 PlayerID, FFet
 			Completed.ExecuteIfBound(Currencies);
 		});
 }
+
+void UInvoFunctions::GetInvoCurrencyAmountForPlayer(int64 GameID, int64 PlayerID, TFunction<void(const FString&)> OnCurrencyAmountFetched)
+{
+	FString FetchCurrenciesEndpoint = FString::Printf(TEXT("http://127.0.0.1:3030/currencies?game_id=%lld&player_id=%lld"), GameID, PlayerID);
+	FString HttpMethod = "GET";
+	FString None = "";
+
+	// Make the HTTP request
+	MakeHttpRequest(FetchCurrenciesEndpoint, HttpMethod, None, [OnCurrencyAmountFetched](TSharedPtr<FJsonObject> JsonObject)
+		{
+			if (JsonObject.IsValid() && JsonObject->HasTypedField<EJson::Array>("currencies"))
+			{
+				const TArray<TSharedPtr<FJsonValue>>& CurrenciesArray = JsonObject->GetArrayField("currencies");
+
+				FString CurrencyAmount;
+
+				if (CurrenciesArray.Num() > 0)
+				{
+					TSharedPtr<FJsonObject> CurrencyObject = CurrenciesArray[0]->AsObject();
+					CurrencyAmount = CurrencyObject->GetStringField("currency_amount");
+				}
+
+				OnCurrencyAmountFetched(CurrencyAmount);
+			}
+			else
+			{
+				OnCurrencyAmountFetched(FString("Failed to retrieve currency amount."));
+			}
+		});
+}
+
+void UInvoFunctions::GetInvoCurrencyAmountForPlayerBP(int64 GameID, int64 PlayerID, const FOnCurrencyAmountFetchedBP& OnCurrencyAmountFetchedBP)
+{
+	GetInvoCurrencyAmountForPlayer(GameID, PlayerID, [OnCurrencyAmountFetchedBP](const FString& CurrencyAmount)
+		{
+			OnCurrencyAmountFetchedBP.ExecuteIfBound(CurrencyAmount);
+		});
+}
+

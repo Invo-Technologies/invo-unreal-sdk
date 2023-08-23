@@ -16,6 +16,8 @@ class FJsonObject;
 
 // For CallBack Functions 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnInvoAPICallCompleted, bool, bSuccess);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnCurrencyAmountFetchedBP, const FString&, CurrencyAmount);
+
 
 
 UENUM(BlueprintType)
@@ -370,6 +372,11 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
 	static void FetchCurrenciesForUserBP(int64 GameID, int64 PlayerID, FFetchCurrenciesCompleted Completed);
+
+	static void GetInvoCurrencyAmountForPlayer(int64 GameID, int64 PlayerID, TFunction<void(const FString&)> OnCurrencyAmountFetched);
+	
+	UFUNCTION(BlueprintCallable, Category = "Invo", meta = (DisplayName = "Get Currency Amount For Player in BP"))
+	static void GetInvoCurrencyAmountForPlayerBP(int64 GameID, int64 PlayerID, const FOnCurrencyAmountFetchedBP & OnCurrencyAmountFetchedBP);
 
 private:
 
