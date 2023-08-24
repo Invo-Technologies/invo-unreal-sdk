@@ -1081,7 +1081,7 @@ void UInvoFunctions::TransferCurrency(int64 SourceGameID, int64 SourcePlayerID, 
 	JsonObject->SetNumberField("target_game_id", TargetGameID);
 	JsonObject->SetNumberField("target_player_id", TargetPlayerID);
 	JsonObject->SetNumberField("amount", Amount);
-	//JsonObject->SetStringField("currency_name", CurrencyName); // Hiding for now. Unsure if we should provide this parameter
+	//JsonObject->SetStringField("currency_name", CurrencyName);
 
 	// Convert JSON object to string
 	FString JsonData;
