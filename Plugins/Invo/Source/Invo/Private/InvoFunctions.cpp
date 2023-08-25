@@ -79,6 +79,8 @@
 TSharedRef<SWebBrowser> UInvoFunctions::WebBrowser = SNew(SWebBrowser);
 TSharedRef<SWindow> UInvoFunctions::Window = SNew(SWindow);
 
+bool UInvoFunctions::bIsTransferCompleted = false;
+
 #define GET_CONNECTION	UNetConnection* PlayerNetConnection = UInvoFunctions::Internal_GetNetConnection(WorldContextObject)
 
 FString UInvoFunctions::GetInvoPluginVersion()
@@ -298,6 +300,94 @@ void UInvoFunctions::GetInvoFacts()
 }
 
 
+void UInvoFunctions::OpenWebView(const FString& Url)
+{
+	const uint16 MajorVersion = FEngineVersion::Current().GetMajor();
+	// Check the version of Unreal Engine.
+	if (MajorVersion >= 5)
+	{
+		// Create a struct to hold the function parameters
+
+		UWorld* World = GWorld->GetWorld();
+
+		if (World)
+		{
+
+			Window = SNew(SWindow)
+				.Title(FText::FromString(TEXT("Web Browser")))
+				.ClientSize(FVector2D(800, 600));
+
+
+			WebBrowser = SNew(SWebBrowser)
+				.ShowControls(true)
+				.ShowAddressBar(false)
+				.OnUrlChanged_Lambda([&](const FText& NewUrlText) {
+				FString NewUrl = NewUrlText.ToString();
+				// Handle URL changes here
+				UE_LOG(LogTemp, Warning, TEXT("Testing %s"), *NewUrl);
+
+				HandleURLChange(NewUrl);
+
+				});
+
+
+			if (!Window->IsActive())
+			{
+				Window->SetContent(UInvoFunctions::WebBrowser);
+				FSlateApplication::Get().AddWindow(Window);
+				WebBrowser->LoadURL(Url);
+			}
+
+		}
+		else
+		{
+			// Handle the case when the world is not valid
+			UE_LOG(LogTemp, Warning, TEXT(" UWorld not working"));
+		}
+	}
+	else
+	{
+
+		TSharedPtr<SWebBrowser> WebBrowserWidget = SNew(SWebBrowser)
+			.InitialURL(Url)
+			.ShowControls(false)
+			.ShowAddressBar(false);
+
+		GEngine->GameViewport->AddViewportWidgetContent(
+			SNew(SWeakWidget).PossiblyNullContent(WebBrowserWidget.ToSharedRef())
+		);
+
+		Window = SNew(SWindow)
+			.Title(FText::FromString(TEXT("Web Browser")))
+			.ClientSize(FVector2D(800, 600));
+
+		WebBrowser = SNew(SWebBrowser)
+			.ShowControls(true)
+			.ShowAddressBar(false)
+			.OnUrlChanged_Lambda([](const FText& NewUrlText) {
+			FString NewUrl = NewUrlText.ToString();
+			// Handle URL changes here
+
+			if (NewUrl.Contains(TEXT("buttonClicked"))) {
+				// Button on the website was clicked
+				FString Message = TEXT("Button Clicked!");
+				float Duration = 5.0f;
+				FColor Color = FColor::Green;
+				GEngine->AddOnScreenDebugMessage(-1, Duration, Color, Message);
+			}
+				});
+
+		Window->SetContent(UInvoFunctions::WebBrowser);
+		FSlateApplication::Get().AddWindow(Window);
+
+		if (Url.IsEmpty())
+			WebBrowser->LoadURL(TEXT("http://localhost:5173/"));
+		else
+			WebBrowser->LoadURL(Url);
+
+	}
+}
+
 void UInvoFunctions::HandleURLChange(const FString& NewUrl)
 {
 	if (NewUrl.Contains(TEXT("closeButton"))) {
@@ -380,6 +470,24 @@ void UInvoFunctions::HandleURLChange(const FString& NewUrl)
 
 
 	}
+	else if (NewUrl.Contains(TEXT("Transfer_Completed")))
+	{
+
+		// Access the game thread
+		FGraphEventRef Task = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
+			{
+				if (Window.ToSharedPtr().IsValid() && WebBrowser.ToSharedPtr().IsValid())
+				{
+					//HandleJavaScriptCallback("ButtonClicked", WebBrowser);
+					//HandleJavaScriptTestCallback("Transfer", WebBrowser);
+					UInvoFunctions::bIsTransferCompleted = true;
+				}
+
+
+			}, TStatId(), nullptr, ENamedThreads::GameThread);
+
+
+	}
 
 	// Add more conditions for other URL changes if needed
 	// else if (NewUrl.Contains(TEXT("PageA"))) { ... }
@@ -388,240 +496,14 @@ void UInvoFunctions::HandleURLChange(const FString& NewUrl)
 }
 
 
-void UInvoFunctions::OpenInvoWebPage(UObject* WorldContextObject)
+void UInvoFunctions::OpenInvoWebPage(UObject* WorldContextObject, FString Url = "")
 {
 	//FString URL = TEXT("https://www.ourinvo.com");
 	//FPlatformProcess::LaunchURL(*URL, nullptr, nullptr);
-
+	// React Local Sample Page Ui http://localhost:5173/
 	// Get the Unreal Engine version.
-	const uint16 MajorVersion = FEngineVersion::Current().GetMajor();
-	// Check the version of Unreal Engine.
-	if (MajorVersion >= 5)
-	{
-		// Create a struct to hold the function parameters
-
-		UWorld* World = GWorld->GetWorld();
-
-		if (World)
-		{
-			
-			Window = SNew(SWindow)
-				.Title(FText::FromString(TEXT("Web Browser")))
-				.ClientSize(FVector2D(800, 600));
-
-			
-			WebBrowser = SNew(SWebBrowser)
-				.ShowControls(true)
-				.ShowAddressBar(false)
-				.OnUrlChanged_Lambda([&](const FText& NewUrlText) {
-				FString NewUrl = NewUrlText.ToString();
-				// Handle URL changes here
-				UE_LOG(LogTemp, Warning, TEXT("Testing %s"), *NewUrl);
-
-				HandleURLChange(NewUrl);
-
-				//if (NewUrl.Contains(TEXT("buttonClicked"))) {
-				//	UE_LOG(LogTemp, Warning, TEXT("Button Clicked "));
-				//	
-				//	// Button on the website was clicked
-				//	FString Message = TEXT("Button Clicked!");
-				//	float Duration = 5.0f;
-				//	FColor Color = FColor::Green;
-				//	GEngine->AddOnScreenDebugMessage(-1, Duration, Color, Message);	
-				//	
-				//	
-				//	// Access the game thread
-				//	FGraphEventRef Task = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
-				//		{
-				//			if (Window.ToSharedPtr().IsValid() && WebBrowser.ToSharedPtr().IsValid())
-				//			{
-				//				HandleJavaScriptCallback("ButtonClicked", WebBrowser);
-				//			}
-				//
-				//
-				//		}, TStatId(), nullptr, ENamedThreads::GameThread);
-				//
-				//
-				//	// Access the game thread
-				//	FGraphEventRef Task_Render = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
-				//		{
-				//			// Perform game thread operations here
-				//				if (Window.ToSharedPtr().IsValid() && WebBrowser.ToSharedPtr().IsValid())
-				//				{
-				//					
-				//				}							
-				//
-				//		}, TStatId(), nullptr, ENamedThreads::ActualRenderingThread);
-				//
-				//}
-				//
-				//UE_LOG(LogTemp, Warning, TEXT("Testing %s"), *NewUrl);
-				//
-				//if (NewUrl.Contains(TEXT("PageA"))) {
-				//	UE_LOG(LogTemp, Warning, TEXT("Button Clicked "));
-				//
-				//	// Button on the website was clicked
-				//	FString Message = TEXT("Button Clicked!");
-				//	float Duration = 5.0f;
-				//	FColor Color = FColor::Green;
-				//	GEngine->AddOnScreenDebugMessage(-1, Duration, Color, Message);
-				//
-				//
-				//	// Access the game thread
-				//	FGraphEventRef Task = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
-				//		{
-				//			if (Window.ToSharedPtr().IsValid() && WebBrowser.ToSharedPtr().IsValid())
-				//			{
-				//				HandleJavaScriptCallback("ButtonClicked", WebBrowser);
-				//			}
-				//
-				//
-				//		}, TStatId(), nullptr, ENamedThreads::GameThread);
-				//
-				//
-				//	// Access the game thread
-				//	FGraphEventRef Task_Render = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
-				//		{
-				//			// Perform game thread operations here
-				//			if (Window.ToSharedPtr().IsValid() && WebBrowser.ToSharedPtr().IsValid())
-				//			{
-				//
-				//			}
-				//
-				//		}, TStatId(), nullptr, ENamedThreads::ActualRenderingThread);
-				//
-				//}
-				//
-				//
-				//if (NewUrl.Contains(TEXT("PageB"))) {
-				//	UE_LOG(LogTemp, Warning, TEXT("Button Test Clicked "));
-				//
-				//	// Button on the website was clicked
-				//	FString Message = TEXT("Button Test Clicked!");
-				//	float Duration = 5.0f;
-				//	FColor Color = FColor::Green;
-				//	GEngine->AddOnScreenDebugMessage(-1, Duration, Color, Message);
-				//
-				//
-				//	// Access the game thread
-				//	FGraphEventRef Task = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
-				//		{
-				//			if (Window.ToSharedPtr().IsValid() && WebBrowser.ToSharedPtr().IsValid())
-				//			{
-				//				//HandleJavaScriptTestCallback("ButtonTestClicked", WebBrowser);
-				//				GetInvoFunctionOne();
-				//			}
-				//
-				//
-				//		}, TStatId(), nullptr, ENamedThreads::GameThread);
-				//
-				//
-				//	// Access the game thread
-				//	FGraphEventRef Task_Render = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
-				//	{
-				//		// Perform game thread operations here
-				//		if (Window.ToSharedPtr().IsValid() && WebBrowser.ToSharedPtr().IsValid())
-				//		{
-				//
-				//		}
-				//
-				//	}, TStatId(), nullptr, ENamedThreads::ActualRenderingThread);
-				//}
-				//
-				//
-				//
-				//
-				//if (NewUrl.Contains(TEXT("buttonClicked"))) {
-				//	UE_LOG(LogTemp, Warning, TEXT("Button Clicked "));
-				//
-				//	// Button on the website was clicked
-				//	FString Message = TEXT("Button Clicked!");
-				//	float Duration = 5.0f;
-				//	FColor Color = FColor::Green;
-				//	GEngine->AddOnScreenDebugMessage(-1, Duration, Color, Message);
-				//
-				//
-				//	// Access the game thread
-				//	FGraphEventRef Task = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
-				//		{
-				//			if (Window.ToSharedPtr().IsValid() && WebBrowser.ToSharedPtr().IsValid())
-				//			{
-				//				HandleJavaScriptCallback("ButtonClicked", WebBrowser);
-				//			}
-				//
-				//
-				//		}, TStatId(), nullptr, ENamedThreads::GameThread);
-				//
-				//
-				//	// Access the game thread
-				//	FGraphEventRef Task_Render = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
-				//		{
-				//			// Perform game thread operations here
-				//			if (Window.ToSharedPtr().IsValid() && WebBrowser.ToSharedPtr().IsValid())
-				//			{
-				//
-				//			}
-				//
-				//		}, TStatId(), nullptr, ENamedThreads::ActualRenderingThread);
-				//
-				//}
-				//
-				});
-		
-			
-			if (!Window->IsActive())
-			{
-				Window->SetContent(UInvoFunctions::WebBrowser);
-				FSlateApplication::Get().AddWindow(Window);
-				WebBrowser->LoadURL(TEXT("http://localhost:5173/"));
-			}
-
-		}
-		else
-		{
-			// Handle the case when the world is not valid
-			UE_LOG(LogTemp, Warning, TEXT(" UWorld not working"));
-		}
-	}
-	else
-	{
-		
-		FString URL = TEXT("http://localhost:5173/");
-
-		TSharedPtr<SWebBrowser> WebBrowserWidget = SNew(SWebBrowser)
-			.InitialURL(URL)
-			.ShowControls(false)
-			.ShowAddressBar(false);
-
-		GEngine->GameViewport->AddViewportWidgetContent(
-			SNew(SWeakWidget).PossiblyNullContent(WebBrowserWidget.ToSharedRef())
-		);
-
-		Window = SNew(SWindow)
-			.Title(FText::FromString(TEXT("Web Browser")))
-			.ClientSize(FVector2D(800, 600));
-
-		WebBrowser = SNew(SWebBrowser)
-			.ShowControls(true)
-			.ShowAddressBar(false)
-			.OnUrlChanged_Lambda([](const FText& NewUrlText) {
-			FString NewUrl = NewUrlText.ToString();
-			// Handle URL changes here
-
-			if (NewUrl.Contains(TEXT("buttonClicked"))) {
-				// Button on the website was clicked
-				FString Message = TEXT("Button Clicked!");
-				float Duration = 5.0f;
-				FColor Color = FColor::Green;
-				GEngine->AddOnScreenDebugMessage(-1, Duration, Color, Message);
-			}
-		});
-
-		Window->SetContent(UInvoFunctions::WebBrowser);
-		FSlateApplication::Get().AddWindow(Window);
-		WebBrowser->LoadURL(TEXT("http://localhost:5173/"));
-	}
-	
+	FString ReactWepPageUrl = "http://localhost:5173/";
+	OpenWebView(ReactWepPageUrl);
 }
 
 
@@ -941,6 +823,7 @@ void UInvoFunctions::GetInvoFunctionThree(FOnInvoAPICallCompleted OnCompleted)
 
 }
 
+
 void UInvoFunctions::InvoAPICallFunction(FOnInvoAPICallCompleted OnCompleted)
 {
 	SimulateAPICall(OnCompleted);
@@ -1196,3 +1079,11 @@ void UInvoFunctions::GetInvoCurrencyAmountForPlayerBP(int64 GameID, int64 Player
 		});
 }
 
+
+void UInvoFunctions::InvoTransferCurrencyWebViewBP(FOnInvoAPICallCompleted OnTransferCompleted)
+{
+	FString Url = "http://localhost:5173/transfer";
+	OpenWebView(Url);
+	OnTransferCompleted.ExecuteIfBound(UInvoFunctions::bIsTransferCompleted);
+
+}

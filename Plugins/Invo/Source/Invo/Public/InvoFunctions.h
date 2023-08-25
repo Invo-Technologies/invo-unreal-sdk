@@ -342,7 +342,7 @@ public:
 	static void GetInvoFacts();
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
-	static void OpenInvoWebPage(UObject* WorldContextObject);
+	static void OpenInvoWebPage(UObject* WorldContextObject, FString Url);
 	
 	UFUNCTION(BlueprintCallable, Category = "Invo")
 	static void CloseInvoWebBrowser();
@@ -371,12 +371,17 @@ public:
 	static void TransferCurrencyBP(int64 SourceGameID, int64 SourcePlayerID, int64 TargetGameID, int64 TargetPlayerID, float Amount, FString CurrencyName, FOnInvoAPICallCompleted OnTransferCompleted);
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
+	static void InvoTransferCurrencyWebViewBP(FOnInvoAPICallCompleted OnTransferCompleted);
+
+	UFUNCTION(BlueprintCallable, Category = "Invo")
 	static void FetchCurrenciesForUserBP(int64 GameID, int64 PlayerID, FFetchCurrenciesCompleted Completed);
 
 	static void GetInvoCurrencyAmountForPlayer(int64 GameID, int64 PlayerID, TFunction<void(const FString&)> OnCurrencyAmountFetched);
 	
 	UFUNCTION(BlueprintCallable, Category = "Invo", meta = (DisplayName = "Get Currency Amount For Player in BP"))
 	static void GetInvoCurrencyAmountForPlayerBP(int64 GameID, int64 PlayerID, const FOnCurrencyAmountFetchedBP & OnCurrencyAmountFetchedBP);
+
+	static bool bIsTransferCompleted;
 
 private:
 
@@ -398,6 +403,9 @@ private:
 
 	UFUNCTION()
 	static void HandleURLChange(const FString& NewUrl);
+
+	UFUNCTION()
+	static void OpenWebView(const FString& Url);
 
 	static TSharedRef<SWebBrowser> WebBrowser;
 	static TSharedRef<SWindow> Window;
