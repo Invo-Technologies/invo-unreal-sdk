@@ -126,19 +126,19 @@ struct FCurrencyData
 {
 	GENERATED_BODY()
 
-		UPROPERTY(BlueprintReadOnly)
+		UPROPERTY(BlueprintReadOnly, Category = "FCurrencyData")
 		FString CurrencyID;
 		
-		UPROPERTY(BlueprintReadOnly)
+		UPROPERTY(BlueprintReadOnly, Category = "FCurrencyData")
 			FString GameID;
 		
-		UPROPERTY(BlueprintReadOnly)
+		UPROPERTY(BlueprintReadOnly, Category = "FCurrencyData")
 			FString UserID;
 		
-		UPROPERTY(BlueprintReadOnly)
+		UPROPERTY(BlueprintReadOnly, Category = "FCurrencyData")
 			FString CurrencyName;
 		
-		UPROPERTY(BlueprintReadOnly)
+		UPROPERTY(BlueprintReadOnly, Category = "FCurrencyData")
 			FString CurrencyAmount;
 
 	// ... Add any other fields you need, based on your database schema ...

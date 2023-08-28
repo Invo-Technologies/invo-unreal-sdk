@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "{75F80B11-4571-162F-70C1-EAADD5327006}",
+	"EngineAssociation": "{03F0DD8B-474D-5426-5F98-D3936C02E60D}",
 	"Category": "",
 	"Description": "",
 	"Modules": [
@@ -38,5 +38,8 @@
 			"Name": "Invo",
 			"Enabled": true
 		}
+	],
+	"TargetPlatforms": [
+		"Windows"
 	]
 }

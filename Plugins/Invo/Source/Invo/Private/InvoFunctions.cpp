@@ -61,6 +61,8 @@
 #include "Blueprint/WidgetBlueprintLibrary.h"
 
 #include "Runtime/SlateCore/Public/Widgets/SWindow.h"
+#include "Runtime/Slate/Public/Framework/Application/SlateApplication.h"
+#include "Runtime/Engine/Public/TimerManager.h"
 
 
 //#include "Engine/Plugins/Runtime/Database/DatabaseSupport/Public/DatabaseSupport.h"

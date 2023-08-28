@@ -3,36 +3,30 @@
 	"Version": 1,
 	"VersionName": "1.0",
 	"FriendlyName": "Envo",
-	"Description": "",
+	"Description": "Test",
 	"Category": "Other",
 	"CreatedBy": "Alex",
-	"CreatedByURL": "https://createlex.com",
-	"DocsURL": "",
+	"CreatedByURL": "https://ourinvo.com",
+	"DocsURL": "https://ourinvo.com",
 	"MarketplaceURL": "",
-	"SupportURL": "",
+	"SupportURL": "https://ourinvo.com",
 	"CanContainContent": true,
 	"IsBetaVersion": false,
 	"IsExperimentalVersion": false,
 	"EngineVersion": "5.2.0",
-	"Installed": true,
+	"Installed": false,
+	"“Enabled”": false,
+
 	"Modules": [
 		{
 			"Name": "Invo",
 			"Type": "Runtime",
 			"LoadingPhase": "PostEngineInit",
 			"PlatformAllowList": [
-				"Win64",
-				"Mac",
-				"Android",
-				"Linux",
-				"TVOS"
+				"Win64"
 			],
 			"Dependencies": [
-				"WebBrowser",
-				"DatabaseSupport"
-			],
-			"AdditionalDependencies": [
-				"DatabaseSupport"
+				"WebBrowser"
 			]
 		}
 	]
