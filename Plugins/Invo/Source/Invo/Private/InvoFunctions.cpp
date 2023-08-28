@@ -1,7 +1,6 @@
 // Alex Kissi Jr for OurInvo  CopyRight 2023 SDK Unreal Engine Uplugin.
 #include "InvoFunctions.h"
 //#include "WebBrowserWidget.h"
-#include "InvoWebBrowser.h"
 
 #include "GameFramework/PlayerController.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
@@ -155,12 +154,12 @@ UInvoFunctions::UInvoFunctions(const FObjectInitializer& ObjectInitializer)
 FInvoAssetData UInvoFunctions::GetInvoUserSettingsInput()
 {
 	/*
-	* 
+	*
 	* Please go into your Project Config Folder and in Your DefaultEngine.ini
 	* Copy Paste the information below..
 	* [/Script/Invo.UInvoFunctions]
 	* SecretKey = YOUR_INVO_SECRETE_KEY
-	* 
+	*
 	* [/Script/Invo.UInvoFunctions]
 	  SECRETKEY=YOUR_KEY
 
@@ -170,7 +169,7 @@ FInvoAssetData UInvoFunctions::GetInvoUserSettingsInput()
 	FString SecretsIniFilePath = FPaths::ProjectConfigDir() + TEXT("Secrets.ini");
 	FPaths::NormalizeFilename(SecretsIniFilePath);
 
-		FString SecretKey;
+	FString SecretKey;
 	if (GConfig->GetString(TEXT("/Script/Invo.UInvoFunctions"), TEXT("SECRETKEY"), SecretKey, SecretsIniFilePath))
 	{
 		//UE_LOG(LogTemp, Warning, TEXT("Secret Key: %s"), *SecretKey);
@@ -189,7 +188,7 @@ FInvoAssetData UInvoFunctions::GetInvoUserSettingsInput()
 			FInvoAssetData AssetData = Settings->AssetData;
 			//UE_LOG(LogTemp, Warning, TEXT("Testing Game_ID %s"), *Settings->Game_ID)
 
-				return AssetData;
+			return AssetData;
 			// Access the properties of AssetData...
 		}
 
@@ -330,7 +329,7 @@ void UInvoFunctions::OpenWebView(const FString& Url)
 
 				HandleURLChange(NewUrl);
 
-				});
+					});
 
 
 			if (!Window->IsActive())
@@ -420,7 +419,7 @@ void UInvoFunctions::HandleURLChange(const FString& NewUrl)
 				}
 			}, TStatId(), nullptr, ENamedThreads::ActualRenderingThread);
 	}
-	else if (NewUrl.Contains(TEXT("PageA"))) 
+	else if (NewUrl.Contains(TEXT("PageA")))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Button Clicked "));
 
@@ -457,7 +456,7 @@ void UInvoFunctions::HandleURLChange(const FString& NewUrl)
 	}
 	else if (NewUrl.Contains(TEXT("PageB")))
 	{
-	
+
 		// Access the game thread
 		FGraphEventRef Task = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
 			{
@@ -540,7 +539,7 @@ void UInvoFunctions::HandleJavaScriptCallback(const FString& Message, TSharedPtr
 		FSlateApplication::Get().RequestDestroyWindow(Window);
 
 		GEngine->AddOnScreenDebugMessage(-1, 5.0, FColor::Green, TEXT("Curreent thread is not a game thread %s"));
-		
+
 	}
 }
 
@@ -593,7 +592,7 @@ void UInvoFunctions::HandleJavaScriptTestCallback(const FString& Message, TShare
 
 			}, TStatId(), nullptr, ENamedThreads::GameThread);
 	}
-	else if (Message == "PageB") 
+	else if (Message == "PageB")
 	{
 		FString JsonData = TEXT("");
 		InvoAPIJsonReturnCall(TEXT("San Diego"), JsonData, [](TSharedPtr<FJsonObject> JsonObject)
@@ -626,7 +625,7 @@ bool UInvoFunctions::CloseWebBrowser(const FString& Message)
 	// Call your function here using the provided parameters
 	// Make sure to access any game-related objects/components safely on the game thread
 	return true;
- }
+}
 
 
 void UInvoFunctions::MakeHttpRequest(const FString& Url, const FString& Method, FString& JsonData /*= TEXT("")*/, TFunction<void(TSharedPtr<FJsonObject>)> Callback)
@@ -705,29 +704,29 @@ void UInvoFunctions::MakeHttpRequest(const FString& Url, const FString& Method, 
 	HttpRequest->ProcessRequest();
 }
 
-void UInvoFunctions ::InvoAPIJsonReturnCall(const FString& City, FString& JsonData, TFunction<void(TSharedPtr<FJsonObject>)> Callback)
+void UInvoFunctions::InvoAPIJsonReturnCall(const FString& City, FString& JsonData, TFunction<void(TSharedPtr<FJsonObject>)> Callback)
 {
 	FJsonObject JsonRespObject;
 
 	const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
-	
+
 	FString Asset_ID = Settings->AssetData.Asset_ID.Replace(TEXT(" "), TEXT("%20"));
 
 	FString Url = FString::Printf(TEXT("https://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s"), *City.Replace(TEXT(" "), TEXT("%20")), *Settings->Game_ID);
 
-	MakeHttpRequest(Url, TEXT("GET"),JsonData,[Callback](TSharedPtr<FJsonObject> JsonObject)
-	{
-		if (JsonObject.IsValid())
+	MakeHttpRequest(Url, TEXT("GET"), JsonData, [Callback](TSharedPtr<FJsonObject> JsonObject)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Its working on the you."));
+			if (JsonObject.IsValid())
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Its working on the you."));
 
-			Callback(JsonObject);
-		}
-		else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Failed to get weather data"));
-		}
-	});
+				Callback(JsonObject);
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Failed to get weather data"));
+			}
+		});
 }
 
 void UInvoFunctions::GetInvoFunctionOne(FOnInvoAPICallCompleted OnCompleted)
@@ -763,7 +762,7 @@ void UInvoFunctions::GetInvoFunctionOne(FOnInvoAPICallCompleted OnCompleted)
 void UInvoFunctions::GetInvoFunctionTwo(FOnInvoAPICallCompleted OnCompleted)
 {
 	FString JsonData = TEXT("");
-	InvoAPIJsonReturnCall(TEXT("San Diego"),JsonData, [OnCompleted](TSharedPtr<FJsonObject> JsonObject)
+	InvoAPIJsonReturnCall(TEXT("San Diego"), JsonData, [OnCompleted](TSharedPtr<FJsonObject> JsonObject)
 		{
 			// Do something with JsonObject
 				// This will be called when the HTTP request completes
@@ -795,7 +794,7 @@ void UInvoFunctions::GetInvoFunctionThree(FOnInvoAPICallCompleted OnCompleted)
 {
 	FString JsonData = TEXT("");
 	InvoAPIJsonReturnCall(TEXT("London"), JsonData, [OnCompleted](TSharedPtr<FJsonObject> JsonObject)
-	{
+		{
 			// Do something with JsonObject
 				// This will be called when the HTTP request completes
 
@@ -821,7 +820,7 @@ void UInvoFunctions::GetInvoFunctionThree(FOnInvoAPICallCompleted OnCompleted)
 			}
 
 
-	});
+		});
 
 }
 
@@ -844,7 +843,7 @@ void UInvoFunctions::SimulateAPICall(FOnInvoAPICallCompleted OnCompleted)
 		});
 
 	const float DelaySeconds = 3.0f;
-	
+
 	UWorld* World = GWorld->GetWorld();
 	if (World)
 	{
@@ -873,11 +872,11 @@ void UInvoFunctions::GetInvoEthBlockNumber(TFunction<void(const FString&)> OnBlo
 	FString APIKey = "cb539443ebed4038bd4ae05f5223e49a";
 	FString BlockchainUrl = FString::Printf(TEXT("https://mainnet.infura.io/v3/%s"), *APIKey);
 	FString HttpMethod = "POST";
-	
+
 	// The JSON data to send in the request
 	FString JsonData = TEXT("{\"jsonrpc\":\"2.0\",\"method\":\"eth_blockNumber\",\"params\":[],\"id\":1}");
-	
-	 //Call the existing MakeHttpRequest function with the blockchain URL, HTTP method, and JSON data
+
+	//Call the existing MakeHttpRequest function with the blockchain URL, HTTP method, and JSON data
 	MakeHttpRequest(BlockchainUrl, HttpMethod, JsonData, [OnBlockNumberReceived](TSharedPtr<FJsonObject> JsonObject)
 		{
 			if (JsonObject.IsValid() && JsonObject->HasField("result"))
@@ -1015,7 +1014,7 @@ void UInvoFunctions::FetchCurrenciesForUser(int64 GameID, int64 PlayerID, TFunct
 			if (JsonObject.IsValid() && JsonObject->HasField("currency_id"))
 			{
 
-				TArray<FCurrencyData> Currencies;				
+				TArray<FCurrencyData> Currencies;
 				TSharedPtr<FJsonObject> CurrencyObject = JsonObject;
 
 				FCurrencyData Currency;
@@ -1028,7 +1027,7 @@ void UInvoFunctions::FetchCurrenciesForUser(int64 GameID, int64 PlayerID, TFunct
 				// ... Extract any other fields you need ...
 
 				Currencies.Add(Currency);
-			
+
 				OnCurrenciesFetched(Currencies);
 			}
 			else
@@ -1061,7 +1060,7 @@ void UInvoFunctions::GetInvoCurrencyAmountForPlayer(int64 GameID, int64 PlayerID
 			{
 				FString CurrencyAmount;
 
-				
+
 				CurrencyAmount = JsonObject->GetStringField("currency_amount");
 
 				OnCurrencyAmountFetched(CurrencyAmount);
