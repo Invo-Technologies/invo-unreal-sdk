@@ -1,4 +1,4 @@
-Ôªø// @AlexKissiJr for OurInvo  CopyRight 2023 SDK Unreal Engine Uplugin.
+// @AlexKissiJr for OurInvo  CopyRight 2023 SDK Unreal Engine Uplugin.
 
 #pragma once
 
@@ -16,6 +16,8 @@ class FJsonObject;
 
 // For CallBack Functions 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnInvoAPICallCompleted, bool, bSuccess);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnCurrencyAmountFetchedBP, const FString&, CurrencyAmount);
+
 
 
 UENUM(BlueprintType)
@@ -113,11 +115,37 @@ struct FInvoAssetData
 		ETokenPair TP;
 
 	/**
-	* There is an additional ‚ÄúReference‚Äù variable that is the (String) name of their Default_Currency.
+	* There is an additional ìReferenceî variable that is the (String) name of their Default_Currency.
 	**/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FInvoAssetData")
 		FString RDC;
 };
+
+USTRUCT(BlueprintType)
+struct FCurrencyData
+{
+	GENERATED_BODY()
+
+		UPROPERTY(BlueprintReadOnly, Category = "FCurrencyData")
+		FString CurrencyID;
+
+	UPROPERTY(BlueprintReadOnly, Category = "FCurrencyData")
+		FString GameID;
+
+	UPROPERTY(BlueprintReadOnly, Category = "FCurrencyData")
+		FString UserID;
+
+	UPROPERTY(BlueprintReadOnly, Category = "FCurrencyData")
+		FString CurrencyName;
+
+	UPROPERTY(BlueprintReadOnly, Category = "FCurrencyData")
+		FString CurrencyAmount;
+
+	// ... Add any other fields you need, based on your database schema ...
+};
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(FFetchCurrenciesCompleted, const TArray<FCurrencyData>&, Currencies);
+
 
 
 USTRUCT(BlueprintType)
@@ -126,22 +154,31 @@ struct FInvoRegistrationInfo
 	GENERATED_BODY()
 
 		UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
-		FString DeveloperName;
+		FString UserType;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
+		FString CompanyName;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
 		FString ContactEmail;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
-		FString PhoneNumber;
+		FString CompanyContactNumber;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
-		FString Address;
+		FString CompanyContact;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
-		FString City;
+		FString CompanyAddress1;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
-		FString State;
+		FString CompanyCity;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
+		FString CompanyZipcode;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
+		FString CompanyState;
 
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Developer Registration Info")
@@ -221,7 +258,7 @@ public:
 	* @return [bool] True if valid UNetConnection was found from PlayerController. False otherwise.
 	**/
 	UFUNCTION(BlueprintPure, Category = "Fun ", meta = (WorldContext = "WorldContextObject"))
-	static bool GetMaxPacket(const UObject* WorldContextObject, int32& OutMaxPacket);
+		static bool GetMaxPacket(const UObject* WorldContextObject, int32& OutMaxPacket);
 
 
 	// Get the plugin version number
@@ -229,19 +266,19 @@ public:
 
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
-	static void PrintSDKVersionOnScreen();
+		static void PrintSDKVersionOnScreen();
 
 	UInvoFunctions(const FObjectInitializer& ObjectInitializer);
 
 	UPROPERTY(config, EditAnywhere, Category = Settings)
-	bool Active = false;
+		bool Active = false;
 
 	/**
 	* Applications ID or Account_ID
 	* @param OutMaxPacket [int32&] Maximum packet size.
 	**/
 	UPROPERTY(config, EditAnywhere, Category = Settings)
-	FString Account_ID;
+		FString Account_ID;
 
 	/**
 	* Applications ID or Game_ID
@@ -249,7 +286,7 @@ public:
 	* @return [bool] True if valid UNetConnection was found from PlayerController. False otherwise.
 	**/
 	UPROPERTY(config, EditAnywhere, Category = Settings)
-	FString Game_ID;
+		FString Game_ID;
 
 
 	/**
@@ -259,75 +296,92 @@ public:
 	* INVO Babe Node = Sandbox
 	**/
 	UPROPERTY(config, EditAnywhere, Category = Settings)
-	EBabeNodeSetting Node;
+		EBabeNodeSetting Node;
 
 
 	/**
 	* This is the name of the game's default resource that will be traded on the INVO exchange.
 	* This field will require the Game Developer to instantiate an unsigned integer equivalent to the U.S Dollar
-	* amount of how much their currency is evaluated at in the GAME_ID‚Äôs trading pair within their Pool_ID.
+	* amount of how much their currency is evaluated at in the GAME_IDís trading pair within their Pool_ID.
 	**/
 	UPROPERTY(config, EditAnywhere, Category = Settings)
-	FString Default_Currency;
+		FString Default_Currency;
 
 	/**
 	* This will be a randomly generated unsigned integer.
 	**/
 	UPROPERTY(config, EditAnywhere, Category = Settings)
-	int32 Pool_ID;
+		int32 Pool_ID;
 
 	UPROPERTY(config, EditAnywhere, Category = Settings)
-	FInvoAssetData AssetData;
+		FInvoAssetData AssetData;
 
 	UPROPERTY(config, EditAnywhere, Category = Settings)
-	FString Function_ID;
+		FString Function_ID;
 
 	// Registration Info Fields
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Registration Info")
-	FInvoRegistrationInfo DeveloperRegistrationInfo;
+		FInvoRegistrationInfo DeveloperRegistrationInfo;
 
 	// Credit Card Info Field
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Devoloper Credit Card Info")
-	FInvoCreditCardInfo CreditCardInfo;
+		FInvoCreditCardInfo CreditCardInfo;
 
 
 	UFUNCTION(BlueprintPure, Category = "Invo ", meta = (WorldContext = "WorldContextObject"))
-	static bool InvoTestCall(const UObject* WorldContextObject, int32& OutMaxPacket);
+		static bool InvoTestCall(const UObject* WorldContextObject, int32& OutMaxPacket);
 
 
 	UFUNCTION(BlueprintCallable, Category = "Invo ", meta = (WorldContext = "WorldContextObject"))
-	void InvoTestCallBeta(const UObject* WorldContextObjects);
+		void InvoTestCallBeta(const UObject* WorldContextObjects);
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
-	static FInvoAssetData GetInvoUserSettingsInput();
+		static FInvoAssetData GetInvoUserSettingsInput();
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
-	static void GetInvoFacts();
+		static void GetInvoFacts();
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
-	static void OpenInvoWebPage(UObject* WorldContextObject);
-	
-	UFUNCTION(BlueprintCallable, Category = "Invo")
-	static void CloseInvoWebBrowser();
+		static void OpenInvoWebPage(UObject* WorldContextObject, FString Url);
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
-	static void GetInvoFunctionOne(FOnInvoAPICallCompleted OnCompleted);
+		static void CloseInvoWebBrowser();
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
-	static void GetInvoFunctionTwo(FOnInvoAPICallCompleted OnCompleted);
+		static void GetInvoFunctionOne(FOnInvoAPICallCompleted OnCompleted);
+
+	UFUNCTION(BlueprintCallable, Category = "Invo")
+		static void GetInvoFunctionTwo(FOnInvoAPICallCompleted OnCompleted);
 
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
-	static void GetInvoFunctionThree(FOnInvoAPICallCompleted OnCompleted);
+		static void GetInvoFunctionThree(FOnInvoAPICallCompleted OnCompleted);
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
-	static void InvoAPICallFunction(FOnInvoAPICallCompleted OnCompleted);
+		static void InvoAPICallFunction(FOnInvoAPICallCompleted OnCompleted);
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
-	static void GetInvoEthBlockNumberBP(FOnInvoAPICallCompleted OnBlockNumberReceived);
+		static void GetInvoEthBlockNumberBP(FOnInvoAPICallCompleted OnBlockNumberReceived);
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
-	static void RegisterInvoGameDevBP(FOnInvoAPICallCompleted OnRegisteredDatabaseReceived);
+		static void RegisterInvoGameDevBP(FOnInvoAPICallCompleted OnRegisteredDatabaseReceived);
+
+	// Blueprint function for transferring currency
+	UFUNCTION(BlueprintCallable, Category = "Invo")
+		static void TransferCurrencyBP(int64 SourceGameID, int64 SourcePlayerID, int64 TargetGameID, int64 TargetPlayerID, float Amount, FString CurrencyName, FOnInvoAPICallCompleted OnTransferCompleted);
+
+	UFUNCTION(BlueprintCallable, Category = "Invo")
+		static void InvoTransferCurrencyWebViewBP(FOnInvoAPICallCompleted OnTransferCompleted);
+
+	UFUNCTION(BlueprintCallable, Category = "Invo")
+		static void FetchCurrenciesForUserBP(int64 GameID, int64 PlayerID, FFetchCurrenciesCompleted Completed);
+
+	static void GetInvoCurrencyAmountForPlayer(int64 GameID, int64 PlayerID, TFunction<void(const FString&)> OnCurrencyAmountFetched);
+
+	UFUNCTION(BlueprintCallable, Category = "Invo", meta = (DisplayName = "Get Currency Amount For Player in BP"))
+		static void GetInvoCurrencyAmountForPlayerBP(int64 GameID, int64 PlayerID, const FOnCurrencyAmountFetchedBP& OnCurrencyAmountFetchedBP);
+
+	static bool bIsTransferCompleted;
 
 private:
 
@@ -348,7 +402,10 @@ private:
 	static void SimulateAPICall(FOnInvoAPICallCompleted OnCompleted);
 
 	UFUNCTION()
-	static void HandleURLChange(const FString& NewUrl);
+		static void HandleURLChange(const FString& NewUrl);
+
+	UFUNCTION()
+		static void OpenWebView(const FString& Url);
 
 	static TSharedRef<SWebBrowser> WebBrowser;
 	static TSharedRef<SWindow> Window;
@@ -356,6 +413,10 @@ private:
 	static void GetInvoEthBlockNumber(TFunction<void(const FString&)> OnBlockNumberReceived);
 
 	static void RegisterInvoGameDev(TFunction<void(const FString&)> OnRegisteredDatabaseReceived);
+
+	static void TransferCurrency(int64 SourceGameID, int64 SourcePlayerID, int64 TargetGameID, int64 TargetPlayerID, float Amount, FString CurrencyName, TFunction<void(const FString&)> OnTransferCompleted);
+
+	static void FetchCurrenciesForUser(int64 GameID, int64 PlayerID, TFunction<void(const TArray<FCurrencyData>&)> OnCurrenciesFetched);
 
 	/**
 	* This is for postgressSQL connections.

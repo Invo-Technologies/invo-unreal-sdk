@@ -2,38 +2,35 @@
 	"FileVersion": 3,
 	"Version": 1,
 	"VersionName": "1.0",
-	"FriendlyName": "Envo",
-	"Description": "",
+	"FriendlyName": "Invo",
+	"Description": "OurInvo SDK",
 	"Category": "Other",
-	"CreatedBy": "Alex",
-	"CreatedByURL": "https://createlex.com",
-	"DocsURL": "",
-	"MarketplaceURL": "",
-	"SupportURL": "",
+	"CreatedBy": "OurInvo",
+	"CreatedByURL": "https://www.ourinvo.com/",
+	"DocsURL": "https://www.ourinvo.com/SDK",
+	"MarketplaceURL": "https://www.ourinvo.com",
+	"SupportURL": "https://www.ourinvo.com/support",
 	"CanContainContent": true,
 	"IsBetaVersion": false,
 	"IsExperimentalVersion": false,
-	"EngineVersion": "5.2.0",
-	"Installed": true,
+	"Installed": false,
 	"Modules": [
 		{
 			"Name": "Invo",
 			"Type": "Runtime",
 			"LoadingPhase": "PostEngineInit",
 			"PlatformAllowList": [
-				"Win64",
-				"Mac",
-				"Android",
-				"Linux",
-				"TVOS"
+				"Win64"
 			],
 			"Dependencies": [
-				"WebBrowser",
-				"DatabaseSupport"
-			],
-			"AdditionalDependencies": [
-				"DatabaseSupport"
+				"WebBrowser"
 			]
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "WebBrowserWidget",
+			"Enabled": true
 		}
 	]
 }

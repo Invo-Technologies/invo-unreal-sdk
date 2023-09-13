@@ -1,7 +1,6 @@
 // Alex Kissi Jr for OurInvo  CopyRight 2023 SDK Unreal Engine Uplugin.
 #include "InvoFunctions.h"
 //#include "WebBrowserWidget.h"
-#include "InvoWebBrowser.h"
 
 #include "GameFramework/PlayerController.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
@@ -61,6 +60,8 @@
 #include "Blueprint/WidgetBlueprintLibrary.h"
 
 #include "Runtime/SlateCore/Public/Widgets/SWindow.h"
+#include "Runtime/Slate/Public/Framework/Application/SlateApplication.h"
+#include "Runtime/Engine/Public/TimerManager.h"
 
 
 //#include "Engine/Plugins/Runtime/Database/DatabaseSupport/Public/DatabaseSupport.h"
@@ -78,6 +79,8 @@
 // Initialize the static shared references
 TSharedRef<SWebBrowser> UInvoFunctions::WebBrowser = SNew(SWebBrowser);
 TSharedRef<SWindow> UInvoFunctions::Window = SNew(SWindow);
+
+bool UInvoFunctions::bIsTransferCompleted = false;
 
 #define GET_CONNECTION	UNetConnection* PlayerNetConnection = UInvoFunctions::Internal_GetNetConnection(WorldContextObject)
 
@@ -151,12 +154,12 @@ UInvoFunctions::UInvoFunctions(const FObjectInitializer& ObjectInitializer)
 FInvoAssetData UInvoFunctions::GetInvoUserSettingsInput()
 {
 	/*
-	* 
+	*
 	* Please go into your Project Config Folder and in Your DefaultEngine.ini
 	* Copy Paste the information below..
 	* [/Script/Invo.UInvoFunctions]
 	* SecretKey = YOUR_INVO_SECRETE_KEY
-	* 
+	*
 	* [/Script/Invo.UInvoFunctions]
 	  SECRETKEY=YOUR_KEY
 
@@ -166,7 +169,7 @@ FInvoAssetData UInvoFunctions::GetInvoUserSettingsInput()
 	FString SecretsIniFilePath = FPaths::ProjectConfigDir() + TEXT("Secrets.ini");
 	FPaths::NormalizeFilename(SecretsIniFilePath);
 
-		FString SecretKey;
+	FString SecretKey;
 	if (GConfig->GetString(TEXT("/Script/Invo.UInvoFunctions"), TEXT("SECRETKEY"), SecretKey, SecretsIniFilePath))
 	{
 		//UE_LOG(LogTemp, Warning, TEXT("Secret Key: %s"), *SecretKey);
@@ -185,7 +188,7 @@ FInvoAssetData UInvoFunctions::GetInvoUserSettingsInput()
 			FInvoAssetData AssetData = Settings->AssetData;
 			//UE_LOG(LogTemp, Warning, TEXT("Testing Game_ID %s"), *Settings->Game_ID)
 
-				return AssetData;
+			return AssetData;
 			// Access the properties of AssetData...
 		}
 
@@ -298,6 +301,94 @@ void UInvoFunctions::GetInvoFacts()
 }
 
 
+void UInvoFunctions::OpenWebView(const FString& Url)
+{
+	const uint16 MajorVersion = FEngineVersion::Current().GetMajor();
+	// Check the version of Unreal Engine.
+	if (MajorVersion >= 5)
+	{
+		// Create a struct to hold the function parameters
+
+		UWorld* World = GWorld->GetWorld();
+
+		if (World)
+		{
+
+			Window = SNew(SWindow)
+				.Title(FText::FromString(TEXT("Web Browser")))
+				.ClientSize(FVector2D(800, 600));
+
+
+			WebBrowser = SNew(SWebBrowser)
+				.ShowControls(true)
+				.ShowAddressBar(false)
+				.OnUrlChanged_Lambda([&](const FText& NewUrlText) {
+				FString NewUrl = NewUrlText.ToString();
+				// Handle URL changes here
+				UE_LOG(LogTemp, Warning, TEXT("Testing %s"), *NewUrl);
+
+				HandleURLChange(NewUrl);
+
+					});
+
+
+			if (!Window->IsActive())
+			{
+				Window->SetContent(UInvoFunctions::WebBrowser);
+				FSlateApplication::Get().AddWindow(Window);
+				WebBrowser->LoadURL(Url);
+			}
+
+		}
+		else
+		{
+			// Handle the case when the world is not valid
+			UE_LOG(LogTemp, Warning, TEXT(" UWorld not working"));
+		}
+	}
+	else
+	{
+
+		TSharedPtr<SWebBrowser> WebBrowserWidget = SNew(SWebBrowser)
+			.InitialURL(Url)
+			.ShowControls(false)
+			.ShowAddressBar(false);
+
+		GEngine->GameViewport->AddViewportWidgetContent(
+			SNew(SWeakWidget).PossiblyNullContent(WebBrowserWidget.ToSharedRef())
+		);
+
+		Window = SNew(SWindow)
+			.Title(FText::FromString(TEXT("Web Browser")))
+			.ClientSize(FVector2D(800, 600));
+
+		WebBrowser = SNew(SWebBrowser)
+			.ShowControls(true)
+			.ShowAddressBar(false)
+			.OnUrlChanged_Lambda([](const FText& NewUrlText) {
+			FString NewUrl = NewUrlText.ToString();
+			// Handle URL changes here
+
+			if (NewUrl.Contains(TEXT("buttonClicked"))) {
+				// Button on the website was clicked
+				FString Message = TEXT("Button Clicked!");
+				float Duration = 5.0f;
+				FColor Color = FColor::Green;
+				GEngine->AddOnScreenDebugMessage(-1, Duration, Color, Message);
+			}
+				});
+
+		Window->SetContent(UInvoFunctions::WebBrowser);
+		FSlateApplication::Get().AddWindow(Window);
+
+		if (Url.IsEmpty())
+			WebBrowser->LoadURL(TEXT("http://localhost:5173/"));
+		else
+			WebBrowser->LoadURL(Url);
+
+	}
+}
+
 void UInvoFunctions::HandleURLChange(const FString& NewUrl)
 {
 	if (NewUrl.Contains(TEXT("closeButton"))) {
@@ -328,7 +419,7 @@ void UInvoFunctions::HandleURLChange(const FString& NewUrl)
 				}
 			}, TStatId(), nullptr, ENamedThreads::ActualRenderingThread);
 	}
-	else if (NewUrl.Contains(TEXT("PageA"))) 
+	else if (NewUrl.Contains(TEXT("PageA")))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Button Clicked "));
 
@@ -365,7 +456,7 @@ void UInvoFunctions::HandleURLChange(const FString& NewUrl)
 	}
 	else if (NewUrl.Contains(TEXT("PageB")))
 	{
-	
+
 		// Access the game thread
 		FGraphEventRef Task = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
 			{
@@ -373,6 +464,24 @@ void UInvoFunctions::HandleURLChange(const FString& NewUrl)
 				{
 					//HandleJavaScriptCallback("ButtonClicked", WebBrowser);
 					HandleJavaScriptTestCallback("PageB", WebBrowser);
+				}
+
+
+			}, TStatId(), nullptr, ENamedThreads::GameThread);
+
+
+	}
+	else if (NewUrl.Contains(TEXT("Transfer_Completed")))
+	{
+
+		// Access the game thread
+		FGraphEventRef Task = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
+			{
+				if (Window.ToSharedPtr().IsValid() && WebBrowser.ToSharedPtr().IsValid())
+				{
+					//HandleJavaScriptCallback("ButtonClicked", WebBrowser);
+					//HandleJavaScriptTestCallback("Transfer", WebBrowser);
+					UInvoFunctions::bIsTransferCompleted = true;
 				}
 
 
@@ -388,240 +497,14 @@ void UInvoFunctions::HandleURLChange(const FString& NewUrl)
 }
 
 
-void UInvoFunctions::OpenInvoWebPage(UObject* WorldContextObject)
+void UInvoFunctions::OpenInvoWebPage(UObject* WorldContextObject, FString Url = "")
 {
 	//FString URL = TEXT("https://www.ourinvo.com");
 	//FPlatformProcess::LaunchURL(*URL, nullptr, nullptr);
-
+	// React Local Sample Page Ui http://localhost:5173/
 	// Get the Unreal Engine version.
-	const uint16 MajorVersion = FEngineVersion::Current().GetMajor();
-	// Check the version of Unreal Engine.
-	if (MajorVersion >= 5)
-	{
-		// Create a struct to hold the function parameters
-
-		UWorld* World = GWorld->GetWorld();
-
-		if (World)
-		{
-			
-			Window = SNew(SWindow)
-				.Title(FText::FromString(TEXT("Web Browser")))
-				.ClientSize(FVector2D(800, 600));
-
-			
-			WebBrowser = SNew(SWebBrowser)
-				.ShowControls(true)
-				.ShowAddressBar(false)
-				.OnUrlChanged_Lambda([&](const FText& NewUrlText) {
-				FString NewUrl = NewUrlText.ToString();
-				// Handle URL changes here
-				UE_LOG(LogTemp, Warning, TEXT("Testing %s"), *NewUrl);
-
-				HandleURLChange(NewUrl);
-
-				//if (NewUrl.Contains(TEXT("buttonClicked"))) {
-				//	UE_LOG(LogTemp, Warning, TEXT("Button Clicked "));
-				//	
-				//	// Button on the website was clicked
-				//	FString Message = TEXT("Button Clicked!");
-				//	float Duration = 5.0f;
-				//	FColor Color = FColor::Green;
-				//	GEngine->AddOnScreenDebugMessage(-1, Duration, Color, Message);	
-				//	
-				//	
-				//	// Access the game thread
-				//	FGraphEventRef Task = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
-				//		{
-				//			if (Window.ToSharedPtr().IsValid() && WebBrowser.ToSharedPtr().IsValid())
-				//			{
-				//				HandleJavaScriptCallback("ButtonClicked", WebBrowser);
-				//			}
-				//
-				//
-				//		}, TStatId(), nullptr, ENamedThreads::GameThread);
-				//
-				//
-				//	// Access the game thread
-				//	FGraphEventRef Task_Render = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
-				//		{
-				//			// Perform game thread operations here
-				//				if (Window.ToSharedPtr().IsValid() && WebBrowser.ToSharedPtr().IsValid())
-				//				{
-				//					
-				//				}							
-				//
-				//		}, TStatId(), nullptr, ENamedThreads::ActualRenderingThread);
-				//
-				//}
-				//
-				//UE_LOG(LogTemp, Warning, TEXT("Testing %s"), *NewUrl);
-				//
-				//if (NewUrl.Contains(TEXT("PageA"))) {
-				//	UE_LOG(LogTemp, Warning, TEXT("Button Clicked "));
-				//
-				//	// Button on the website was clicked
-				//	FString Message = TEXT("Button Clicked!");
-				//	float Duration = 5.0f;
-				//	FColor Color = FColor::Green;
-				//	GEngine->AddOnScreenDebugMessage(-1, Duration, Color, Message);
-				//
-				//
-				//	// Access the game thread
-				//	FGraphEventRef Task = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
-				//		{
-				//			if (Window.ToSharedPtr().IsValid() && WebBrowser.ToSharedPtr().IsValid())
-				//			{
-				//				HandleJavaScriptCallback("ButtonClicked", WebBrowser);
-				//			}
-				//
-				//
-				//		}, TStatId(), nullptr, ENamedThreads::GameThread);
-				//
-				//
-				//	// Access the game thread
-				//	FGraphEventRef Task_Render = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
-				//		{
-				//			// Perform game thread operations here
-				//			if (Window.ToSharedPtr().IsValid() && WebBrowser.ToSharedPtr().IsValid())
-				//			{
-				//
-				//			}
-				//
-				//		}, TStatId(), nullptr, ENamedThreads::ActualRenderingThread);
-				//
-				//}
-				//
-				//
-				//if (NewUrl.Contains(TEXT("PageB"))) {
-				//	UE_LOG(LogTemp, Warning, TEXT("Button Test Clicked "));
-				//
-				//	// Button on the website was clicked
-				//	FString Message = TEXT("Button Test Clicked!");
-				//	float Duration = 5.0f;
-				//	FColor Color = FColor::Green;
-				//	GEngine->AddOnScreenDebugMessage(-1, Duration, Color, Message);
-				//
-				//
-				//	// Access the game thread
-				//	FGraphEventRef Task = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
-				//		{
-				//			if (Window.ToSharedPtr().IsValid() && WebBrowser.ToSharedPtr().IsValid())
-				//			{
-				//				//HandleJavaScriptTestCallback("ButtonTestClicked", WebBrowser);
-				//				GetInvoFunctionOne();
-				//			}
-				//
-				//
-				//		}, TStatId(), nullptr, ENamedThreads::GameThread);
-				//
-				//
-				//	// Access the game thread
-				//	FGraphEventRef Task_Render = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
-				//	{
-				//		// Perform game thread operations here
-				//		if (Window.ToSharedPtr().IsValid() && WebBrowser.ToSharedPtr().IsValid())
-				//		{
-				//
-				//		}
-				//
-				//	}, TStatId(), nullptr, ENamedThreads::ActualRenderingThread);
-				//}
-				//
-				//
-				//
-				//
-				//if (NewUrl.Contains(TEXT("buttonClicked"))) {
-				//	UE_LOG(LogTemp, Warning, TEXT("Button Clicked "));
-				//
-				//	// Button on the website was clicked
-				//	FString Message = TEXT("Button Clicked!");
-				//	float Duration = 5.0f;
-				//	FColor Color = FColor::Green;
-				//	GEngine->AddOnScreenDebugMessage(-1, Duration, Color, Message);
-				//
-				//
-				//	// Access the game thread
-				//	FGraphEventRef Task = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
-				//		{
-				//			if (Window.ToSharedPtr().IsValid() && WebBrowser.ToSharedPtr().IsValid())
-				//			{
-				//				HandleJavaScriptCallback("ButtonClicked", WebBrowser);
-				//			}
-				//
-				//
-				//		}, TStatId(), nullptr, ENamedThreads::GameThread);
-				//
-				//
-				//	// Access the game thread
-				//	FGraphEventRef Task_Render = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
-				//		{
-				//			// Perform game thread operations here
-				//			if (Window.ToSharedPtr().IsValid() && WebBrowser.ToSharedPtr().IsValid())
-				//			{
-				//
-				//			}
-				//
-				//		}, TStatId(), nullptr, ENamedThreads::ActualRenderingThread);
-				//
-				//}
-				//
-				});
-		
-			
-			if (!Window->IsActive())
-			{
-				Window->SetContent(UInvoFunctions::WebBrowser);
-				FSlateApplication::Get().AddWindow(Window);
-				WebBrowser->LoadURL(TEXT("http://localhost:5173/"));
-			}
-
-		}
-		else
-		{
-			// Handle the case when the world is not valid
-			UE_LOG(LogTemp, Warning, TEXT(" UWorld not working"));
-		}
-	}
-	else
-	{
-		
-		FString URL = TEXT("http://localhost:5173/");
-
-		TSharedPtr<SWebBrowser> WebBrowserWidget = SNew(SWebBrowser)
-			.InitialURL(URL)
-			.ShowControls(false)
-			.ShowAddressBar(false);
-
-		GEngine->GameViewport->AddViewportWidgetContent(
-			SNew(SWeakWidget).PossiblyNullContent(WebBrowserWidget.ToSharedRef())
-		);
-
-		Window = SNew(SWindow)
-			.Title(FText::FromString(TEXT("Web Browser")))
-			.ClientSize(FVector2D(800, 600));
-
-		WebBrowser = SNew(SWebBrowser)
-			.ShowControls(true)
-			.ShowAddressBar(false)
-			.OnUrlChanged_Lambda([](const FText& NewUrlText) {
-			FString NewUrl = NewUrlText.ToString();
-			// Handle URL changes here
-
-			if (NewUrl.Contains(TEXT("buttonClicked"))) {
-				// Button on the website was clicked
-				FString Message = TEXT("Button Clicked!");
-				float Duration = 5.0f;
-				FColor Color = FColor::Green;
-				GEngine->AddOnScreenDebugMessage(-1, Duration, Color, Message);
-			}
-		});
-
-		Window->SetContent(UInvoFunctions::WebBrowser);
-		FSlateApplication::Get().AddWindow(Window);
-		WebBrowser->LoadURL(TEXT("http://localhost:5173/"));
-	}
-	
+	FString ReactWepPageUrl = "http://localhost:5173/";
+	OpenWebView(ReactWepPageUrl);
 }
 
 
@@ -656,7 +539,7 @@ void UInvoFunctions::HandleJavaScriptCallback(const FString& Message, TSharedPtr
 		FSlateApplication::Get().RequestDestroyWindow(Window);
 
 		GEngine->AddOnScreenDebugMessage(-1, 5.0, FColor::Green, TEXT("Curreent thread is not a game thread %s"));
-		
+
 	}
 }
 
@@ -709,7 +592,7 @@ void UInvoFunctions::HandleJavaScriptTestCallback(const FString& Message, TShare
 
 			}, TStatId(), nullptr, ENamedThreads::GameThread);
 	}
-	else if (Message == "PageB") 
+	else if (Message == "PageB")
 	{
 		FString JsonData = TEXT("");
 		InvoAPIJsonReturnCall(TEXT("San Diego"), JsonData, [](TSharedPtr<FJsonObject> JsonObject)
@@ -742,7 +625,7 @@ bool UInvoFunctions::CloseWebBrowser(const FString& Message)
 	// Call your function here using the provided parameters
 	// Make sure to access any game-related objects/components safely on the game thread
 	return true;
- }
+}
 
 
 void UInvoFunctions::MakeHttpRequest(const FString& Url, const FString& Method, FString& JsonData /*= TEXT("")*/, TFunction<void(TSharedPtr<FJsonObject>)> Callback)
@@ -775,13 +658,28 @@ void UInvoFunctions::MakeHttpRequest(const FString& Url, const FString& Method, 
 					// Deserialize the response into a JSON object
 					FString ResponseString = Response->GetContentAsString();
 					TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseString);
-
-					TSharedPtr<FJsonObject> JsonObject = MakeShared<FJsonObject>();
-					if (FJsonSerializer::Deserialize(Reader, JsonObject))
+					TSharedPtr<FJsonValue> JsonValue;
+					if (FJsonSerializer::Deserialize(Reader, JsonValue))
 					{
-
-						// Successful API call and JSON parsing
-						Callback(JsonObject);
+						if (JsonValue->Type == EJson::Object)
+						{
+							// Handle JSON object
+							TSharedPtr<FJsonObject> JsonObject = JsonValue->AsObject();
+							Callback(JsonObject);
+						}
+						else if (JsonValue->Type == EJson::Array)
+						{
+							// Handle JSON array
+							TArray<TSharedPtr<FJsonValue>> JsonArray = JsonValue->AsArray();
+							for (const TSharedPtr<FJsonValue>& Item : JsonArray)
+							{
+								if (Item->Type == EJson::Object)
+								{
+									TSharedPtr<FJsonObject> JsonObject = Item->AsObject();
+									Callback(JsonObject);
+								}
+							}
+						}
 					}
 					else
 					{
@@ -806,29 +704,29 @@ void UInvoFunctions::MakeHttpRequest(const FString& Url, const FString& Method, 
 	HttpRequest->ProcessRequest();
 }
 
-void UInvoFunctions ::InvoAPIJsonReturnCall(const FString& City, FString& JsonData, TFunction<void(TSharedPtr<FJsonObject>)> Callback)
+void UInvoFunctions::InvoAPIJsonReturnCall(const FString& City, FString& JsonData, TFunction<void(TSharedPtr<FJsonObject>)> Callback)
 {
 	FJsonObject JsonRespObject;
 
 	const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
-	
+
 	FString Asset_ID = Settings->AssetData.Asset_ID.Replace(TEXT(" "), TEXT("%20"));
 
 	FString Url = FString::Printf(TEXT("https://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s"), *City.Replace(TEXT(" "), TEXT("%20")), *Settings->Game_ID);
 
-	MakeHttpRequest(Url, TEXT("GET"),JsonData,[Callback](TSharedPtr<FJsonObject> JsonObject)
-	{
-		if (JsonObject.IsValid())
+	MakeHttpRequest(Url, TEXT("GET"), JsonData, [Callback](TSharedPtr<FJsonObject> JsonObject)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Its working on the you."));
+			if (JsonObject.IsValid())
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Its working on the you."));
 
-			Callback(JsonObject);
-		}
-		else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Failed to get weather data"));
-		}
-	});
+				Callback(JsonObject);
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Failed to get weather data"));
+			}
+		});
 }
 
 void UInvoFunctions::GetInvoFunctionOne(FOnInvoAPICallCompleted OnCompleted)
@@ -864,7 +762,7 @@ void UInvoFunctions::GetInvoFunctionOne(FOnInvoAPICallCompleted OnCompleted)
 void UInvoFunctions::GetInvoFunctionTwo(FOnInvoAPICallCompleted OnCompleted)
 {
 	FString JsonData = TEXT("");
-	InvoAPIJsonReturnCall(TEXT("San Diego"),JsonData, [OnCompleted](TSharedPtr<FJsonObject> JsonObject)
+	InvoAPIJsonReturnCall(TEXT("San Diego"), JsonData, [OnCompleted](TSharedPtr<FJsonObject> JsonObject)
 		{
 			// Do something with JsonObject
 				// This will be called when the HTTP request completes
@@ -896,7 +794,7 @@ void UInvoFunctions::GetInvoFunctionThree(FOnInvoAPICallCompleted OnCompleted)
 {
 	FString JsonData = TEXT("");
 	InvoAPIJsonReturnCall(TEXT("London"), JsonData, [OnCompleted](TSharedPtr<FJsonObject> JsonObject)
-	{
+		{
 			// Do something with JsonObject
 				// This will be called when the HTTP request completes
 
@@ -922,9 +820,10 @@ void UInvoFunctions::GetInvoFunctionThree(FOnInvoAPICallCompleted OnCompleted)
 			}
 
 
-	});
+		});
 
 }
+
 
 void UInvoFunctions::InvoAPICallFunction(FOnInvoAPICallCompleted OnCompleted)
 {
@@ -944,7 +843,7 @@ void UInvoFunctions::SimulateAPICall(FOnInvoAPICallCompleted OnCompleted)
 		});
 
 	const float DelaySeconds = 3.0f;
-	
+
 	UWorld* World = GWorld->GetWorld();
 	if (World)
 	{
@@ -973,11 +872,11 @@ void UInvoFunctions::GetInvoEthBlockNumber(TFunction<void(const FString&)> OnBlo
 	FString APIKey = "cb539443ebed4038bd4ae05f5223e49a";
 	FString BlockchainUrl = FString::Printf(TEXT("https://mainnet.infura.io/v3/%s"), *APIKey);
 	FString HttpMethod = "POST";
-	
+
 	// The JSON data to send in the request
 	FString JsonData = TEXT("{\"jsonrpc\":\"2.0\",\"method\":\"eth_blockNumber\",\"params\":[],\"id\":1}");
-	
-	 //Call the existing MakeHttpRequest function with the blockchain URL, HTTP method, and JSON data
+
+	//Call the existing MakeHttpRequest function with the blockchain URL, HTTP method, and JSON data
 	MakeHttpRequest(BlockchainUrl, HttpMethod, JsonData, [OnBlockNumberReceived](TSharedPtr<FJsonObject> JsonObject)
 		{
 			if (JsonObject.IsValid() && JsonObject->HasField("result"))
@@ -995,64 +894,42 @@ void UInvoFunctions::RegisterInvoGameDev(TFunction<void(const FString&)> OnRegis
 	// Assuming global connection to the database is already established
 	//pqxx::connection c("dbname=my_first_database user=postgres password=1234");
 
+	// Endpoint and HTTP Method
 	FString RegisterDataBaseEndpoint = FString::Printf(TEXT("http://127.0.0.1:3030/register"));
 	FString HttpMethod = "POST";
 
-
+	// Extract settings and developer information
 	const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
 	auto DeveloperRegistrationInfo = Settings->DeveloperRegistrationInfo;
-	auto GameNme = DeveloperRegistrationInfo.GameName;
 
-	// Create a JSON object
+	// Create a JSON object for the new user table fields
 	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
-	JsonObject->SetStringField("name_or_company_name", DeveloperRegistrationInfo.DeveloperName);
+	JsonObject->SetStringField("user_type", DeveloperRegistrationInfo.UserType);
+	JsonObject->SetStringField("company_name", DeveloperRegistrationInfo.CompanyName);
 	JsonObject->SetStringField("contact_email", DeveloperRegistrationInfo.ContactEmail);
-	JsonObject->SetStringField("phone_number", DeveloperRegistrationInfo.PhoneNumber);
-	JsonObject->SetStringField("city", DeveloperRegistrationInfo.City);
-	JsonObject->SetStringField("state", DeveloperRegistrationInfo.State);
-	JsonObject->SetStringField("country", DeveloperRegistrationInfo.Country);
-	JsonObject->SetStringField("website_url", DeveloperRegistrationInfo.WebsiteURL);
-	JsonObject->SetStringField("tax_identification_number", DeveloperRegistrationInfo.TaxIdentificationNumber);
-	JsonObject->SetStringField("username", DeveloperRegistrationInfo.Username);
+	JsonObject->SetStringField("company_addy_1", DeveloperRegistrationInfo.CompanyAddress1);
+	JsonObject->SetStringField("company_city", DeveloperRegistrationInfo.CompanyCity);
+	JsonObject->SetStringField("company_state", DeveloperRegistrationInfo.CompanyState);
+	JsonObject->SetStringField("company_zipcode", DeveloperRegistrationInfo.CompanyZipcode);
+	JsonObject->SetStringField("company_contact_number", DeveloperRegistrationInfo.CompanyContactNumber);
+	JsonObject->SetStringField("company_contact", DeveloperRegistrationInfo.CompanyContact);
+	JsonObject->SetStringField("company_ein_tax_ssn", DeveloperRegistrationInfo.TaxIdentificationNumber);
 	JsonObject->SetStringField("password", DeveloperRegistrationInfo.Password);
-
 
 	// Convert JSON object to string
 	FString JsonData;
 	TSharedRef<TJsonWriter<>> JsonWriter = TJsonWriterFactory<>::Create(&JsonData);
 	FJsonSerializer::Serialize(JsonObject.ToSharedRef(), JsonWriter);
-	UE_LOG(LogTemp, Warning, TEXT("Testing %s"), *JsonData);
 
-	//Call the existing MakeHttpRequest function with the blockchain URL, HTTP method, and JSON data
+	// Call the existing MakeHttpRequest function
 	MakeHttpRequest(RegisterDataBaseEndpoint, HttpMethod, JsonData, [OnRegisteredDatabaseReceived](TSharedPtr<FJsonObject> JsonObject)
-		{	
-
-			/*
-			
-			if (JsonObject.IsValid() )
+		{
+			// Handle the response (checking for 'company_name' as an indication of successful registration)
+			if (JsonObject.IsValid() && JsonObject->HasField("company_name"))
 			{
-				// Get the result (block number) from the JSON response
-				//UE_LOG(LogTemp, Warning, TEXT("Works %s"), *JsonData);
-				FString BlockNumber = JsonObject->GetStringField("message");
-				FString Message = FString::Printf(TEXT("Works %s "), *BlockNumber);
+				FString Message = FString::Printf(TEXT("Registered successfully: %s"), *JsonObject->GetStringField("company_name"));
 				GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Green, Message);
-				OnRegisteredDatabaseReceived(BlockNumber);
-			}
-			else
-			{
-				//UE_LOG(LogTemp, Warning, TEXT("Some Error %s"), *JsonData);
-				FString Message = FString::Printf(TEXT("Problem register "));
-				GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Red, Message);
-
-			}
-
-			*/
-
-			if (JsonObject.IsValid() && JsonObject->HasField("name_or_company_name"))
-			{
-				FString Message = FString::Printf(TEXT("Registered successfully: %s"), *JsonObject->GetStringField("name_or_company_name"));
-				GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Green, Message);
-				OnRegisteredDatabaseReceived(JsonObject->GetStringField("name_or_company_name"));
+				OnRegisteredDatabaseReceived(JsonObject->GetStringField("company_name"));
 			}
 			else
 			{
@@ -1073,4 +950,141 @@ void UInvoFunctions::RegisterInvoGameDevBP(FOnInvoAPICallCompleted OnRegisteredD
 			UE_LOG(LogTemp, Warning, TEXT("Datbase test %s"), *Result);
 			OnRegisteredDatabaseReceived.ExecuteIfBound(bSuccess);
 		});
+}
+
+void UInvoFunctions::TransferCurrency(int64 SourceGameID, int64 SourcePlayerID, int64 TargetGameID, int64 TargetPlayerID, float Amount, FString CurrencyName, TFunction<void(const FString&)> OnTransferCompleted)
+{
+	// Endpoint and HTTP Method
+	FString TransferEndpoint = FString::Printf(TEXT("http://127.0.0.1:3030/transfer"));
+	FString HttpMethod = "POST";
+
+	// Create a JSON object for the transfer details
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
+	JsonObject->SetNumberField("source_game_id", SourceGameID);
+	JsonObject->SetNumberField("source_player_id", SourcePlayerID);
+	JsonObject->SetNumberField("target_game_id", TargetGameID);
+	JsonObject->SetNumberField("target_player_id", TargetPlayerID);
+	JsonObject->SetNumberField("amount", Amount);
+	//JsonObject->SetStringField("currency_name", CurrencyName); // Hiding for now. Unsure if we should provide this parameter
+
+	// Convert JSON object to string
+	FString JsonData;
+	TSharedRef<TJsonWriter<>> JsonWriter = TJsonWriterFactory<>::Create(&JsonData);
+	FJsonSerializer::Serialize(JsonObject.ToSharedRef(), JsonWriter);
+
+	// Call the existing MakeHttpRequest function
+	MakeHttpRequest(TransferEndpoint, HttpMethod, JsonData, [OnTransferCompleted](TSharedPtr<FJsonObject> JsonObject)
+		{
+			// Handle the response
+			if (JsonObject.IsValid() && JsonObject->HasField("status") && JsonObject->GetStringField("status") == "success")
+			{
+				FString Message = FString::Printf(TEXT("Transfer successful: %s"), *JsonObject->GetStringField("message"));
+				GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Green, Message);
+				OnTransferCompleted(JsonObject->GetStringField("message"));
+			}
+			else
+			{
+				FString Message = FString::Printf(TEXT("Transfer failed."));
+				GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Red, Message);
+				OnTransferCompleted(TEXT("Failed"));
+			}
+		});
+}
+
+
+void UInvoFunctions::TransferCurrencyBP(int64 SourceGameID, int64 SourcePlayerID, int64 TargetGameID, int64 TargetPlayerID, float Amount, FString CurrencyName, FOnInvoAPICallCompleted OnTransferCompleted)
+{
+	TransferCurrency(SourceGameID, SourcePlayerID, TargetGameID, TargetPlayerID, Amount, CurrencyName, [OnTransferCompleted](const FString& Result)
+		{
+			bool bSuccess = Result == "Currency transferred successfully";
+			OnTransferCompleted.ExecuteIfBound(bSuccess);
+		});
+}
+
+
+void UInvoFunctions::FetchCurrenciesForUser(int64 GameID, int64 PlayerID, TFunction<void(const TArray<FCurrencyData>&)> OnCurrenciesFetched)
+{
+	FString FetchCurrenciesEndpoint = FString::Printf(TEXT("http://127.0.0.1:3030/currencies?game_id=%lld&player_id=%lld"), GameID, PlayerID);
+	FString HttpMethod = "GET";
+	FString None = "";
+
+	// Make the HTTP request
+	MakeHttpRequest(FetchCurrenciesEndpoint, HttpMethod, None, [OnCurrenciesFetched](TSharedPtr<FJsonObject> JsonObject)
+		{
+			if (JsonObject.IsValid() && JsonObject->HasField("currency_id"))
+			{
+
+				TArray<FCurrencyData> Currencies;
+				TSharedPtr<FJsonObject> CurrencyObject = JsonObject;
+
+				FCurrencyData Currency;
+				Currency.CurrencyID = CurrencyObject->GetStringField("currency_id");
+				Currency.GameID = CurrencyObject->GetStringField("game_id");
+				Currency.UserID = CurrencyObject->GetStringField("user_id");
+				Currency.CurrencyName = CurrencyObject->GetStringField("currency_name");
+				Currency.CurrencyAmount = CurrencyObject->GetStringField("currency_amount");
+
+				// ... Extract any other fields you need ...
+
+				Currencies.Add(Currency);
+
+				OnCurrenciesFetched(Currencies);
+			}
+			else
+			{
+				TArray<FCurrencyData> EmptyArray;
+				OnCurrenciesFetched(EmptyArray);
+			}
+		});
+}
+
+
+void UInvoFunctions::FetchCurrenciesForUserBP(int64 GameID, int64 PlayerID, FFetchCurrenciesCompleted Completed)
+{
+	FetchCurrenciesForUser(GameID, PlayerID, [Completed](const TArray<FCurrencyData>& Currencies)
+		{
+			Completed.ExecuteIfBound(Currencies);
+		});
+}
+
+void UInvoFunctions::GetInvoCurrencyAmountForPlayer(int64 GameID, int64 PlayerID, TFunction<void(const FString&)> OnCurrencyAmountFetched)
+{
+	FString FetchCurrenciesEndpoint = FString::Printf(TEXT("http://127.0.0.1:3030/currencies?game_id=%lld&player_id=%lld"), GameID, PlayerID);
+	FString HttpMethod = "GET";
+	FString None = "";
+
+	// Make the HTTP request
+	MakeHttpRequest(FetchCurrenciesEndpoint, HttpMethod, None, [OnCurrencyAmountFetched](TSharedPtr<FJsonObject> JsonObject)
+		{
+			if (JsonObject.IsValid() && JsonObject->HasField("currency_amount"))
+			{
+				FString CurrencyAmount;
+
+
+				CurrencyAmount = JsonObject->GetStringField("currency_amount");
+
+				OnCurrencyAmountFetched(CurrencyAmount);
+			}
+			else
+			{
+				OnCurrencyAmountFetched(FString("Failed to retrieve currency amount."));
+			}
+		});
+}
+
+void UInvoFunctions::GetInvoCurrencyAmountForPlayerBP(int64 GameID, int64 PlayerID, const FOnCurrencyAmountFetchedBP& OnCurrencyAmountFetchedBP)
+{
+	GetInvoCurrencyAmountForPlayer(GameID, PlayerID, [OnCurrencyAmountFetchedBP](const FString& CurrencyAmount)
+		{
+			OnCurrencyAmountFetchedBP.ExecuteIfBound(CurrencyAmount);
+		});
+}
+
+
+void UInvoFunctions::InvoTransferCurrencyWebViewBP(FOnInvoAPICallCompleted OnTransferCompleted)
+{
+	FString Url = "http://localhost:5173/transfer";
+	OpenWebView(Url);
+	OnTransferCompleted.ExecuteIfBound(UInvoFunctions::bIsTransferCompleted);
+
 }
