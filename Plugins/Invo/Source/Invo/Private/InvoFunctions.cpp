@@ -1141,7 +1141,7 @@ void UInvoFunctions::InvoShowTicketWidget()
 
 	Window = SNew(SWindow)
 		.Title(NSLOCTEXT("InvoTicket", "WindowTitle", "Invo Ticket System"))
-		.ClientSize(FVector2D(900, 600))
+		.ClientSize(FVector2D(600, 500))
 		.SupportsMinimize(true)
 		.SupportsMaximize(true);
 

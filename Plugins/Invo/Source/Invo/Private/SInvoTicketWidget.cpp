@@ -1,25 +1,61 @@
 #include "SInvoTicketWidget.h"
 #include "Widgets/Layout/SBorder.h"
-#include "Widgets/Layout/SBox.h"
 #include "Widgets/Input/SButton.h"
-#include "Framework/Application/SlateApplication.h"
 
 void SInvoTicketWidget::Construct(const FArguments& InArgs)
 {
+    // Populate PriorityOptions
+    PriorityOptions.Add(MakeShared<FString>("Low"));
+    PriorityOptions.Add(MakeShared<FString>("Medium"));
+    PriorityOptions.Add(MakeShared<FString>("High"));
+    PriorityOptions.Add(MakeShared<FString>("Urgent"));
+
     ChildSlot
         [
             // Set the background color to match UE's UI
             SNew(SBorder)
-                .BorderImage(FCoreStyle::Get().GetBrush("GenericWhiteBox"))  // Use a solid white box as the brush
                 .BorderBackgroundColor(FLinearColor(0.02f, 0.02f, 0.02f))
                 .Padding(10.0f)
                 [
                     SNew(SVerticalBox)
 
-                        // ... [You can add other UI components here as needed]
+                        // Subject Field
+                        + SVerticalBox::Slot()
+                        .AutoHeight()
+                        .Padding(5.0f)
+                        [
+                            SAssignNew(SubjectTextBox, SEditableTextBox)
+                                .HintText(FText::FromString("Enter Ticket Subject"))
+                        ]
 
-                        // Buttons at the bottom, centered
-                        +SVerticalBox::Slot()
+                        // Priority Dropdown
+                        + SVerticalBox::Slot()
+                        .AutoHeight()
+                        .Padding(5.0f)
+                        [
+                            SAssignNew(PriorityComboBox, SComboBox<TSharedPtr<FString>>)
+                                .OptionsSource(&PriorityOptions)
+                                .OnGenerateWidget(this, &SInvoTicketWidget::GeneratePriorityComboBoxWidget)
+                                .OnSelectionChanged(this, &SInvoTicketWidget::OnPriorityChanged)
+                                .InitiallySelectedItem(PriorityOptions[0])
+                                [
+                                    SNew(STextBlock)
+                                        .Text(this, &SInvoTicketWidget::GetPriorityComboBoxText)
+                                ]
+                        ]
+
+                        // Message Body Field
+                        + SVerticalBox::Slot()
+                        .MaxHeight(300.0f)
+                        .Padding(5.0f)
+                        [
+                            SAssignNew(MessageBodyTextBox, SMultiLineEditableTextBox)
+                                .HintText(FText::FromString("Enter Detailed Message"))
+                        ]
+
+
+                        // Submit and Close Buttons at the bottom
+                        + SVerticalBox::Slot()
                         .FillHeight(1.0f)
                         .VAlign(VAlign_Bottom)
                         .HAlign(HAlign_Center)
@@ -61,4 +97,20 @@ FReply SInvoTicketWidget::OnCloseClicked()
 {
     // Handle closing logic here
     return FReply::Handled();
+}
+
+// Additional functions for the ComboBox
+TSharedRef<SWidget> SInvoTicketWidget::GeneratePriorityComboBoxWidget(TSharedPtr<FString> InItem)
+{
+    return SNew(STextBlock).Text(FText::FromString(*InItem));
+}
+
+void SInvoTicketWidget::OnPriorityChanged(TSharedPtr<FString> NewSelection, ESelectInfo::Type SelectInfo)
+{
+    // Handle priority change
+}
+
+FText SInvoTicketWidget::GetPriorityComboBoxText() const
+{
+    return FText::FromString(*PriorityComboBox->GetSelectedItem());
 }
