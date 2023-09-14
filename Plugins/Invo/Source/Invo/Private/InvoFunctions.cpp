@@ -63,6 +63,8 @@
 #include "Runtime/Slate/Public/Framework/Application/SlateApplication.h"
 #include "Runtime/Engine/Public/TimerManager.h"
 
+#include "SInvoTicketWidget.h"
+
 
 //#include "Engine/Plugins/Runtime/Database/DatabaseSupport/Public/DatabaseSupport.h"
 
@@ -79,6 +81,10 @@
 // Initialize the static shared references
 TSharedRef<SWebBrowser> UInvoFunctions::WebBrowser = SNew(SWebBrowser);
 TSharedRef<SWindow> UInvoFunctions::Window = SNew(SWindow);
+
+//Ticket Support
+TSharedPtr<SInvoTicketWidget> UInvoFunctions::InvoTicketWidget;
+
 
 bool UInvoFunctions::bIsTransferCompleted = false;
 
@@ -1087,4 +1093,59 @@ void UInvoFunctions::InvoTransferCurrencyWebViewBP(FOnInvoAPICallCompleted OnTra
 	OpenWebView(Url);
 	OnTransferCompleted.ExecuteIfBound(UInvoFunctions::bIsTransferCompleted);
 
+}
+
+
+
+
+void UInvoFunctions::InvoBindTicketUIKey()
+{
+
+	UWorld* World = GWorld->GetWorld();
+	if (World)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Green, "Invo Show InvoBindTicketUIKey ");
+
+		APlayerController* PC = World->GetFirstPlayerController();
+		if (PC && PC->InputComponent)
+		{
+			PC->SetInputMode(FInputModeUIOnly());
+			PC->bShowMouseCursor = true;
+			UInvoFunctions::InvoShowTicketWidget();
+			//PC->InputComponent->BindKey(EKeys::F1, IE_Pressed, PC, [PC]()
+			//{
+			//	UInvoFunctions::InvoShowTicketWidget();
+			//});
+		}
+	}
+}
+
+
+void UInvoFunctions::InvoShowTicketWidget()
+{
+
+	// Ensure we don't already have the widget open
+	//if (!InvoTicketWidget.IsValid())
+	//{
+	//	SAssignNew(InvoTicketWidget, SInvoTicketWidget);
+	//
+	//	if (GEngine && GEngine->GameViewport)
+	//	{
+	//		GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Green, "Invo Game viewport open  ");
+	//
+	//		GEngine->GameViewport->AddViewportWidgetContent(SNew(SWeakWidget).PossiblyNullContent(InvoTicketWidget.ToSharedRef()));
+	//
+	//	}
+	//}
+
+
+	Window = SNew(SWindow)
+		.Title(NSLOCTEXT("InvoTicket", "WindowTitle", "Invo Ticket System"))
+		.ClientSize(FVector2D(900, 600))
+		.SupportsMinimize(true)
+		.SupportsMaximize(true);
+
+	Window->SetContent(SNew(SInvoTicketWidget));
+
+	FSlateApplication::Get().AddWindow(Window);
 }

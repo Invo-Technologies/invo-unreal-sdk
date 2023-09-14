@@ -13,6 +13,7 @@
 class SWebBrowser;
 class SWindow;
 class FJsonObject;
+class SInvoTicketWidget;
 
 // For CallBack Functions 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnInvoAPICallCompleted, bool, bSuccess);
@@ -240,6 +241,35 @@ public:
 		FString BillingAddress;
 };
 
+/*
+UENUM(BlueprintType)
+enum class EPriority : uint8
+{
+	Low UMETA(DisplayName = "Low"),
+	Medium UMETA(DisplayName = "Medium"),
+	High UMETA(DisplayName = "High")
+};
+
+USTRUCT(BlueprintType) // This allows the struct to be used in Blueprints
+struct FTicketData
+{
+	GENERATED_BODY() // This is required for Unreal's reflection system
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ticket")
+	FString TicketTitle;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ticket")
+	FString Description;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ticket")
+	TEnumAsByte<EPriority> Priority; // Assuming you have an enum called EPriority
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ticket")
+	FString AttachmentPath; // Path to the attached file, if any
+};
+
+
+*/
 
 /**
  *
@@ -383,6 +413,15 @@ public:
 
 	static bool bIsTransferCompleted;
 
+	// Binds the F1 key to show the ticket widget
+	UFUNCTION(BlueprintCallable, Category = "Ticket UI")
+	static void InvoBindTicketUIKey();
+
+	// Displays the SInvoTicketWidget
+	UFUNCTION(BlueprintCallable, Category = "Invo")
+	static void InvoShowTicketWidget();
+
+
 private:
 
 	static void MakeHttpRequest(const FString& Url, const FString& Method, FString& JsonData, TFunction<void(TSharedPtr<FJsonObject>)> Callback);
@@ -417,6 +456,8 @@ private:
 	static void TransferCurrency(int64 SourceGameID, int64 SourcePlayerID, int64 TargetGameID, int64 TargetPlayerID, float Amount, FString CurrencyName, TFunction<void(const FString&)> OnTransferCompleted);
 
 	static void FetchCurrenciesForUser(int64 GameID, int64 PlayerID, TFunction<void(const TArray<FCurrencyData>&)> OnCurrenciesFetched);
+
+	static TSharedPtr<SInvoTicketWidget> InvoTicketWidget;
 
 	/**
 	* This is for postgressSQL connections.
