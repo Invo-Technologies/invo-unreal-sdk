@@ -30,4 +30,6 @@ private:
     TSharedRef<SWidget> GeneratePriorityComboBoxWidget(TSharedPtr<FString> InItem);
     void OnPriorityChanged(TSharedPtr<FString> NewSelection, ESelectInfo::Type SelectInfo);
     FText GetPriorityComboBoxText() const;
+
+    void CloseTicketWidget() const;
 };

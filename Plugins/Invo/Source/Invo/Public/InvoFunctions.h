@@ -18,6 +18,7 @@ class SInvoTicketWidget;
 // For CallBack Functions 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnInvoAPICallCompleted, bool, bSuccess);
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnCurrencyAmountFetchedBP, const FString&, CurrencyAmount);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FHttpResponseReceivedDelegate, const FString&, ResponseData);
 
 
 
@@ -404,17 +405,17 @@ public:
 		static void InvoTransferCurrencyWebViewBP(FOnInvoAPICallCompleted OnTransferCompleted);
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
-		static void FetchCurrenciesForUserBP(int64 GameID, int64 PlayerID, FFetchCurrenciesCompleted Completed);
+	static void FetchCurrenciesForUserBP(int64 GameID, int64 PlayerID, FFetchCurrenciesCompleted Completed);
 
 	static void GetInvoCurrencyAmountForPlayer(int64 GameID, int64 PlayerID, TFunction<void(const FString&)> OnCurrencyAmountFetched);
 
 	UFUNCTION(BlueprintCallable, Category = "Invo", meta = (DisplayName = "Get Currency Amount For Player in BP"))
-		static void GetInvoCurrencyAmountForPlayerBP(int64 GameID, int64 PlayerID, const FOnCurrencyAmountFetchedBP& OnCurrencyAmountFetchedBP);
+	static void GetInvoCurrencyAmountForPlayerBP(int64 GameID, int64 PlayerID, const FOnCurrencyAmountFetchedBP& OnCurrencyAmountFetchedBP);
 
 	static bool bIsTransferCompleted;
 
 	// Binds the F1 key to show the ticket widget
-	UFUNCTION(BlueprintCallable, Category = "Ticket UI")
+	UFUNCTION(BlueprintCallable, Category = "Invo Ticket UI")
 	static void InvoBindTicketUIKey();
 
 	// Displays the SInvoTicketWidget
@@ -454,7 +455,7 @@ private:
 	static void RegisterInvoGameDev(TFunction<void(const FString&)> OnRegisteredDatabaseReceived);
 
 	static void TransferCurrency(int64 SourceGameID, int64 SourcePlayerID, int64 TargetGameID, int64 TargetPlayerID, float Amount, FString CurrencyName, TFunction<void(const FString&)> OnTransferCompleted);
-
+	
 	static void FetchCurrenciesForUser(int64 GameID, int64 PlayerID, TFunction<void(const TArray<FCurrencyData>&)> OnCurrenciesFetched);
 
 	static TSharedPtr<SInvoTicketWidget> InvoTicketWidget;

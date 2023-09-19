@@ -1109,8 +1109,8 @@ void UInvoFunctions::InvoBindTicketUIKey()
 		APlayerController* PC = World->GetFirstPlayerController();
 		if (PC && PC->InputComponent)
 		{
-			PC->SetInputMode(FInputModeUIOnly());
-			PC->bShowMouseCursor = true;
+			//PC->SetInputMode(FInputModeUIOnly());
+			//PC->bShowMouseCursor = true;
 			UInvoFunctions::InvoShowTicketWidget();
 			//PC->InputComponent->BindKey(EKeys::F1, IE_Pressed, PC, [PC]()
 			//{
