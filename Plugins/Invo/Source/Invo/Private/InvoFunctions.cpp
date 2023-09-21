@@ -186,7 +186,7 @@ FInvoAssetData UInvoFunctions::GetInvoUserSettingsInput()
 	}
 
 	const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
-	UE_LOG(LogTemp, Warning, TEXT("Testing Game_ID fisrt %s"), *Settings->Game_ID)
+	UE_LOG(LogTemp, Warning, TEXT("Testing Game_ID fisrt %i"), Settings->Game_ID)
 
 
 		if (Settings)
@@ -710,6 +710,69 @@ void UInvoFunctions::MakeHttpRequest(const FString& Url, const FString& Method, 
 	HttpRequest->ProcessRequest();
 }
 
+void UInvoFunctions::MakeHttpRequest(const FString& Url, const FString& HttpMethod, const FString& Content, TFunction<void(const FString&)> Callback)
+{
+	// Create HTTP Request
+	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> HttpRequest = FHttpModule::Get().CreateRequest();
+
+	HttpRequest->SetURL(Url);
+	HttpRequest->SetVerb(HttpMethod);
+	HttpRequest->SetHeader(TEXT("User-Agent"), TEXT("X-UnrealEngine-Agent"));
+	HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+	HttpRequest->SetContentAsString(Content);
+
+	// Set the callback
+	HttpRequest->OnProcessRequestComplete().BindLambda([Callback](FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSuccess)
+		{
+			if (bSuccess && Response.IsValid())
+			{
+				// Execute the delegate with the response's content as a string.
+				Callback(Response->GetContentAsString());
+			}
+			else
+			{
+				// Handle the failure case. You can adjust this as per your requirements.
+				Callback(TEXT("Failed to get a valid response."));
+			}
+		});
+
+	// Finally, send the HTTP request.
+	HttpRequest->ProcessRequest();
+}
+
+void UInvoFunctions::MakeHttpRequestBP(const FString& Url, const FString& HttpMethod, const FString& Content, FOnHttpResponseReceived OnResponseReceived)
+{
+	// ... (same setup as before)
+		// Create HTTP Request
+	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> HttpRequest = FHttpModule::Get().CreateRequest();
+
+	HttpRequest->SetURL(Url);
+	HttpRequest->SetVerb(HttpMethod);
+	HttpRequest->SetHeader(TEXT("User-Agent"), TEXT("X-UnrealEngine-Agent"));
+	HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+	HttpRequest->SetContentAsString(Content);
+
+
+	HttpRequest->OnProcessRequestComplete().BindLambda([OnResponseReceived](FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSuccess)
+		{
+			if (bSuccess && Response.IsValid())
+			{
+				OnResponseReceived.ExecuteIfBound(Response->GetContentAsString());
+			}
+			else
+			{
+				OnResponseReceived.ExecuteIfBound(TEXT("Failed to get a valid response."));
+			}
+		});
+
+
+	// Finally, send the HTTP request.
+	//HttpRequest->ProcessRequest();
+
+	// ... (send the request)
+}
+
+
 void UInvoFunctions::InvoAPIJsonReturnCall(const FString& City, FString& JsonData, TFunction<void(TSharedPtr<FJsonObject>)> Callback)
 {
 	FJsonObject JsonRespObject;
@@ -718,7 +781,7 @@ void UInvoFunctions::InvoAPIJsonReturnCall(const FString& City, FString& JsonDat
 
 	FString Asset_ID = Settings->AssetData.Asset_ID.Replace(TEXT(" "), TEXT("%20"));
 
-	FString Url = FString::Printf(TEXT("https://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s"), *City.Replace(TEXT(" "), TEXT("%20")), *Settings->Game_ID);
+	FString Url = FString::Printf(TEXT("https://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s"), *City.Replace(TEXT(" "), TEXT("%20")), Settings->Game_ID);
 
 	MakeHttpRequest(Url, TEXT("GET"), JsonData, [Callback](TSharedPtr<FJsonObject> JsonObject)
 		{
@@ -1111,7 +1174,7 @@ void UInvoFunctions::InvoBindTicketUIKey()
 		{
 			//PC->SetInputMode(FInputModeUIOnly());
 			//PC->bShowMouseCursor = true;
-			UInvoFunctions::InvoShowTicketWidget();
+			//UInvoFunctions::InvoShowTicketWidget();
 			//PC->InputComponent->BindKey(EKeys::F1, IE_Pressed, PC, [PC]()
 			//{
 			//	UInvoFunctions::InvoShowTicketWidget();
@@ -1121,7 +1184,7 @@ void UInvoFunctions::InvoBindTicketUIKey()
 }
 
 
-void UInvoFunctions::InvoShowTicketWidget()
+void UInvoFunctions::InvoShowTicketWidget(FOnTicketSubmissionComplete ResponseContent)
 {
 
 	// Ensure we don't already have the widget open

@@ -32,4 +32,6 @@ private:
     FText GetPriorityComboBoxText() const;
 
     void CloseTicketWidget() const;
+    bool ValidateResponseContent(const FString& ResponseContent);
+
 };

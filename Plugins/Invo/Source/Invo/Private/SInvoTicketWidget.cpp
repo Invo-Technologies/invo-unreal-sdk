@@ -10,6 +10,8 @@
 #include "Runtime/Online/HTTP/Public/HttpModule.h"
 #include "Runtime/Online/HTTP/Public/Interfaces/IHttpRequest.h"
 #include "Runtime/Online/HTTP/Public/Interfaces/IHttpResponse.h"
+#include "Runtime/Core/Public/GenericPlatform/GenericPlatformMisc.h"
+#include "Runtime/Core/Public/Misc/MessageDialog.h"
 
 
 void SInvoTicketWidget::Construct(const FArguments& InArgs)
@@ -116,10 +118,12 @@ FReply SInvoTicketWidget::OnSubmitClicked()
     // 2. Create a JSON payload with this data.
     TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
 
+    // Settings from Invo SDK Feilds
+    const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
+
     JsonObject->SetNumberField("user_id", 4);
     JsonObject->SetNumberField("player_id", 4);
-    JsonObject->SetNumberField("game_id", 6);
-
+    JsonObject->SetNumberField("game_id", Settings->Game_ID);
     JsonObject->SetStringField("subject", Subject);
     JsonObject->SetStringField("message_body", Description);
     JsonObject->SetStringField("priority", Priority);
@@ -143,6 +147,59 @@ FReply SInvoTicketWidget::OnSubmitClicked()
     HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
     HttpRequest->SetContentAsString(Payload);
 
+
+    // Alert for empty fields
+    if (Subject.IsEmpty() || Description.IsEmpty())
+    {
+        // Show a Windows alert box
+        FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Subject and Description cannot be empty.")));
+        return FReply::Unhandled();  // Do not proceed further
+    }
+
+
+    // ... (Your existing code to gather data and prepare the payload)
+
+    // Make the HTTP Request
+    UInvoFunctions::MakeHttpRequest(Endpoint, HttpMethod, Payload,
+    [this](const FString& ResponseContent)
+    {
+        if (ValidateResponseContent(ResponseContent))
+        {
+            // Handle the valid response
+            // Log the response's content as a string.
+            UE_LOG(LogTemp, Warning, TEXT("HTTP Response: %s"), *ResponseContent);
+            FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Ticket Submited Succeefully.")));
+
+            UWorld* World = GWorld->GetWorld();
+
+            CloseTicketWidget();
+
+            // Restore player input and cursor mode
+            APlayerController* PlayerController = World->GetFirstPlayerController();
+
+            if (PlayerController)
+            {
+                // Set the input mode back to the game
+                FInputModeGameOnly InputMode;
+                PlayerController->SetInputMode(InputMode);
+
+                // Lock the mouse cursor to the center of the screen
+                PlayerController->bShowMouseCursor = false;
+                PlayerController->bEnableClickEvents = false;
+                PlayerController->bEnableMouseOverEvents = false;
+            }
+        }
+        else
+        {
+            // Handle the invalid response
+            UE_LOG(LogTemp, Warning, TEXT("Failed to get a valid response."));
+            FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Failed to get a valid response")));
+
+        }
+    });
+
+
+    /*
     // Set the callback
     HttpRequest->OnProcessRequestComplete().BindLambda([this](FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSuccess)
         {
@@ -177,9 +234,10 @@ FReply SInvoTicketWidget::OnSubmitClicked()
 
             }
         });
+    */
 
     // Finally, send the HTTP request.
-    HttpRequest->ProcessRequest();
+    //HttpRequest->ProcessRequest();
 
     return FReply::Handled();
 }
@@ -218,4 +276,37 @@ void SInvoTicketWidget::CloseTicketWidget() const
     {
         ParentWindow->RequestDestroyWindow();
     }
+}
+
+bool SInvoTicketWidget:: ValidateResponseContent(const FString& ResponseContent)
+{
+    TSharedPtr<FJsonObject> JsonObject;
+    TSharedRef<TJsonReader<TCHAR>> JsonReader = TJsonReaderFactory<TCHAR>::Create(ResponseContent);
+
+    // 1. Check if it's valid JSON
+    if (!FJsonSerializer::Deserialize(JsonReader, JsonObject) || !JsonObject.IsValid())
+    {
+        UE_LOG(LogTemp, Error, TEXT("Response is not valid JSON."));
+        return false;
+    }
+
+    // 2. Check for Expected Fields
+    if (!JsonObject->HasField("success") || !JsonObject->HasField("message"))
+    {
+        UE_LOG(LogTemp, Error, TEXT("Mandatory fields are missing."));
+        return false;
+    }
+
+    // 3. Validate Field Values
+    // Example: Ensure "expectedField1" is a string and isn't empty
+    FString expectedField1Value = JsonObject->GetStringField("success");
+    if (expectedField1Value.IsEmpty())
+    {
+        UE_LOG(LogTemp, Error, TEXT("'success' value shouldn't be empty."));
+        return false;
+    }
+
+    // Add more validations as needed
+
+    return true;  // If all checks pass
 }
