@@ -19,6 +19,8 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(FOnInvoAPICallCompleted, bool, bSuccess);
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnCurrencyAmountFetchedBP, const FString&, CurrencyAmount);
 DECLARE_DYNAMIC_DELEGATE_OneParam(FHttpResponseReceivedDelegate, const FString&, ResponseData);
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnHttpResponseReceived, const FString&, ResponseContent);
+// Declare the delegate (if using a multi-cast delegate, use DECLARE_DYNAMIC_MULTICAST_DELEGATE)
+DECLARE_DYNAMIC_DELEGATE_TwoParams(FHttpResponseReceived, bool, bSuccess, const FString&, ResponseString);
 
 
 
@@ -429,6 +431,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Invo", meta = (DisplayName = "Make HTTP Request"))
 	static void MakeHttpRequestBP(const FString& Url, const FString& HttpMethod, const FString& Content, FOnHttpResponseReceived OnResponseReceived);
 
+	// Declare the delegate as a static member
+	static FHttpResponseReceived OnHttpResponseReceived;
+
 private:
 
 	static void MakeHttpRequest(const FString& Url, const FString& Method, FString& JsonData, TFunction<void(TSharedPtr<FJsonObject>)> Callback);
@@ -466,11 +471,7 @@ private:
 
 	static TSharedPtr<SInvoTicketWidget> InvoTicketWidget;
 
-	/**
-	* This is for postgressSQL connections.
-	**/
-
-
+	
 	//static TSharedRef<FJsonObject> JsonObjectTest;
 
 protected:

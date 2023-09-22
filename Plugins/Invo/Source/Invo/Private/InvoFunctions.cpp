@@ -12,7 +12,7 @@
 #include "Misc/OutputDeviceRedirector.h"
 #include "Runtime/Core/Public/Misc/Paths.h" // web brouser
 #include "Runtime/Core/Public/HAL/PlatformProcess.h" // web browser
-
+#include "Http.h"
 #include "Runtime/Online/HTTP/Public/Http.h"
 #include "Dom/JsonObject.h"
 #include "Serialization/JsonReader.h"
