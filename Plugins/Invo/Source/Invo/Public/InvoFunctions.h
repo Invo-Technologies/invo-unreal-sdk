@@ -21,6 +21,7 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(FHttpResponseReceivedDelegate, const FString&,
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnHttpResponseReceived, const FString&, ResponseContent);
 // Declare the delegate (if using a multi-cast delegate, use DECLARE_DYNAMIC_MULTICAST_DELEGATE)
 DECLARE_DYNAMIC_DELEGATE_TwoParams(FHttpResponseReceived, bool, bSuccess, const FString&, ResponseString);
+//DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHttpResponseReceived, bool, bWasSuccessful, FString, ResponseContent);
 
 
 
@@ -387,7 +388,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Invo")
 	static void GetInvoFunctionTwo(FOnInvoAPICallCompleted OnCompleted);
 
-
 	UFUNCTION(BlueprintCallable, Category = "Invo")
 	static void GetInvoFunctionThree(FOnInvoAPICallCompleted OnCompleted);
 
@@ -423,16 +423,24 @@ public:
 
 	// Displays the SInvoTicketWidget
 	UFUNCTION(BlueprintCallable, Category = "Invo")
-	static void InvoShowTicketWidget(FOnTicketSubmissionComplete ResponseContent);
+	static void InvoShowTicketWidget(FHttpResponseReceived ResponseContent);
 
 	// Used to call for any UI Class
-	static void MakeHttpRequest(const FString& Url, const FString& HttpMethod, const FString& Content, TFunction<void(const FString&)> Callback);
+	static void MakeHttpRequest(const FString& Url, const FString& HttpMethod, const FString& Content, TFunction<void(const bool, const FString&)> Callback);
 
 	UFUNCTION(BlueprintCallable, Category = "Invo", meta = (DisplayName = "Make HTTP Request"))
 	static void MakeHttpRequestBP(const FString& Url, const FString& HttpMethod, const FString& Content, FOnHttpResponseReceived OnResponseReceived);
 
 	// Declare the delegate as a static member
 	static FHttpResponseReceived OnHttpResponseReceived;
+
+	/**
+	* Converts a JSON string to a Map (Key-Value pairs)
+	* @param JSONString The JSON formatted string
+	* @return Map of Key-Value pairs parsed from the JSON
+	*/
+	UFUNCTION(BlueprintCallable, Category = "Invo")
+	static TMap<FString, FString> InvoConvertJSONStringToMap(const FString& JSONString);
 
 private:
 

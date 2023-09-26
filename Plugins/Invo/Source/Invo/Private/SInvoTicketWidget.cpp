@@ -1,5 +1,6 @@
 #include "SInvoTicketWidget.h"
 #include "InvoFunctions.h"
+#include "InvoHttpManager.h"
 #include "Widgets/Layout/SBorder.h"
 #include "Widgets/Input/SButton.h"
 
@@ -97,7 +98,25 @@ void SInvoTicketWidget::Construct(const FArguments& InArgs)
                         ]
                 ]
         ];
+    SetupWidget();
 }
+
+// This function will be called when the HTTP request completes.
+void SInvoTicketWidget::HandleHttpRequestCompleted(bool bWasSuccessful, const FString& ResponseContent)
+{
+    // Handle the response here.
+    // For instance, display a message to the user based on bWasSuccessful.
+}
+
+// When setting up the widget (probably in its constructor or initialization function)
+void SInvoTicketWidget::SetupWidget()
+{
+    // ... other setup code ...
+
+    // Bind the callback to the delegate.
+    UInvoHttpManager::GetInstance()->OnHttpRequestCompleted.AddDynamic(this, &SInvoTicketWidget::HandleHttpRequestCompleted);
+}
+
 
 FReply SInvoTicketWidget::OnSubmitClicked()
 {
@@ -138,6 +157,9 @@ FReply SInvoTicketWidget::OnSubmitClicked()
     FString Endpoint = "http://127.0.0.1:3030/create_ticket"; // Replace with your actual server address
     FString HttpMethod = "POST";
 
+    //4. Headers 
+    TMap<FString, FString> Headers;
+
     // Create HTTP Request
     TSharedRef<IHttpRequest, ESPMode::ThreadSafe> HttpRequest = FHttpModule::Get().CreateRequest();
 
@@ -159,15 +181,17 @@ FReply SInvoTicketWidget::OnSubmitClicked()
 
     // ... (Your existing code to gather data and prepare the payload)
 
+
     // Make the HTTP Request
-    UInvoFunctions::MakeHttpRequest(Endpoint, HttpMethod, Payload,
-    [this](const FString& ResponseContent)
+    UInvoHttpManager::GetInstance()->MakeHttpRequest(Endpoint, HttpMethod, Headers, Payload,
+    [this](const bool bSuccess, const FString& ResponseContent)
     {
         if (ValidateResponseContent(ResponseContent))
         {
             // Handle the valid response
             // Log the response's content as a string.
-            UE_LOG(LogTemp, Warning, TEXT("HTTP Response: %s"), *ResponseContent);
+            FString StringbSuccess = bSuccess ? "True" : "False";
+            UE_LOG(LogTemp, Warning, TEXT("HTTP Response: %s and is bSucess %s"), *ResponseContent, *StringbSuccess);
             FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Ticket Submited Succeefully.")));
 
             UWorld* World = GWorld->GetWorld();

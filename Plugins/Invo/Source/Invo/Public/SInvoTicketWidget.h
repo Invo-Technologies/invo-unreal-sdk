@@ -12,6 +12,9 @@ public:
     SLATE_END_ARGS()
 
     void Construct(const FArguments& InArgs);
+    void SetupWidget();
+    void HandleHttpRequestCompleted(bool bWasSuccessful, const FString& ResponseContent);
+
 
 private:
     // UI Elements

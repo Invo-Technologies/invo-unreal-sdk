@@ -23,7 +23,7 @@ UInvoHttpManager* UInvoHttpManager::GetInstance()
     return Instance;
 }
 
-void UInvoHttpManager::MakeHttpRequest(const FString& URL, const FString& HttpMethod, const TMap<FString, FString>& Headers)
+void UInvoHttpManager::MakeHttpRequest(const FString& URL, const FString& HttpMethod, const TMap<FString, FString>& Headers, const FString& Payload, HttpRequestCallback Callback)
 {
     // Create HTTP Request
     TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
@@ -34,14 +34,35 @@ void UInvoHttpManager::MakeHttpRequest(const FString& URL, const FString& HttpMe
     // Set the request URL
     Request->SetURL(URL);
 
-    // Set headers, if any
-    for (const auto& Header : Headers)
+    if (Headers.IsEmpty())
     {
-        Request->SetHeader(Header.Key, Header.Value);
+        Request->SetHeader(TEXT("User-Agent"), TEXT("X-UnrealEngine-Agent"));
+        Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
     }
+    else
+
+    {
+        for (const auto& Header : Headers)
+        {
+            Request->SetHeader(Header.Key, Header.Value);
+        }
+    }
+    // Set headers, if any
+ 
+
+    Request->SetContentAsString(Payload);
 
     // Bind the request's completion delegate
     Request->OnProcessRequestComplete().BindUObject(this, &UInvoHttpManager::HttpRequestCompleted);
+
+    // Bind the completion to a new method that will use the callback
+    Request->OnProcessRequestComplete().BindLambda([this, Callback](FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful)
+        {
+            if (Callback)
+            {
+                Callback(bWasSuccessful, Response->GetContentAsString());
+            }
+        });
 
     // Execute the request
     Request->ProcessRequest();
@@ -78,3 +99,6 @@ void UInvoHttpManager::HttpRequestCompleted(FHttpRequestPtr Request, FHttpRespon
         return;  // Exit the function as the unsuccessful response has been handled
     }
 }
+
+/**/
+

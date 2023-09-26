@@ -8,6 +8,7 @@
 #include "Engine/NetConnection.h"
 #include "Engine/GameViewportClient.h"
 #include "GameFramework/WorldSettings.h"
+#include "InvoHttpManager.h"
 
 #include "Misc/OutputDeviceRedirector.h"
 #include "Runtime/Core/Public/Misc/Paths.h" // web brouser
@@ -710,7 +711,7 @@ void UInvoFunctions::MakeHttpRequest(const FString& Url, const FString& Method, 
 	HttpRequest->ProcessRequest();
 }
 
-void UInvoFunctions::MakeHttpRequest(const FString& Url, const FString& HttpMethod, const FString& Content, TFunction<void(const FString&)> Callback)
+void UInvoFunctions::MakeHttpRequest(const FString& Url, const FString& HttpMethod, const FString& Content, TFunction<void(const bool, const FString&)> Callback)
 {
 	// Create HTTP Request
 	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> HttpRequest = FHttpModule::Get().CreateRequest();
@@ -727,14 +728,15 @@ void UInvoFunctions::MakeHttpRequest(const FString& Url, const FString& HttpMeth
 			if (bSuccess && Response.IsValid())
 			{
 				// Execute the delegate with the response's content as a string.
-				Callback(Response->GetContentAsString());
+				Callback(bSuccess, Response->GetContentAsString());
 			}
 			else
 			{
 				// Handle the failure case. You can adjust this as per your requirements.
-				Callback(TEXT("Failed to get a valid response."));
+				Callback(bSuccess, TEXT("Failed to get a valid response."));
 			}
 		});
+
 
 	// Finally, send the HTTP request.
 	HttpRequest->ProcessRequest();
@@ -1184,7 +1186,8 @@ void UInvoFunctions::InvoBindTicketUIKey()
 }
 
 
-void UInvoFunctions::InvoShowTicketWidget(FOnTicketSubmissionComplete ResponseContent)
+/*
+void UInvoFunctions::InvoShowTicketWidget(FHttpResponseReceived ResponseContent)
 {
 
 	// Ensure we don't already have the widget open
@@ -1211,4 +1214,61 @@ void UInvoFunctions::InvoShowTicketWidget(FOnTicketSubmissionComplete ResponseCo
 	Window->SetContent(SNew(SInvoTicketWidget));
 
 	FSlateApplication::Get().AddWindow(Window);
+
+}
+*/
+
+void UInvoFunctions::InvoShowTicketWidget(FHttpResponseReceived ResponseContent)
+{
+	// Create a Ticket Widget instance
+	
+
+	Window = SNew(SWindow)
+		.Title(NSLOCTEXT("InvoTicket", "WindowTitle", "Invo Ticket System"))
+		.ClientSize(FVector2D(600, 500))
+		.SupportsMinimize(true)
+		.SupportsMaximize(true);
+
+	Window->SetContent(SNew(SInvoTicketWidget));
+
+	FSlateApplication::Get().AddWindow(Window);
+
+	
+	/*
+	// Bind the ResponseContent delegate to the HttpRequestCompleted method of UInvoHttpManager
+	UInvoHttpManager::GetInstance()->OnHttpRequestCompleted.AddLambda([ResponseContent](FHttpRequestPtr Request, FHttpResponsePtr HttpResponse, bool bSuccess)
+		{
+			// Extract content from the HttpResponse
+			FString ContentString = HttpResponse.IsValid() ? HttpResponse->GetContentAsString() : TEXT("Invalid Response");
+
+			// Execute the provided delegate
+			ResponseContent.ExecuteIfBound(bSuccess, ContentString);
+		});
+	*/
+	
+}
+
+
+
+TMap<FString, FString> UInvoFunctions::InvoConvertJSONStringToMap(const FString& JSONString)
+{
+	TMap<FString, FString> ResultMap;
+
+
+	TSharedPtr<FJsonObject> JsonObject;
+	TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(JSONString);
+
+
+	if (FJsonSerializer::Deserialize(Reader, JsonObject) && JsonObject.IsValid())
+	{
+		for (auto Pair : JsonObject->Values)
+		{
+			if (Pair.Value.IsValid() && Pair.Value->Type == EJson::String)
+			{
+				ResultMap.Add(Pair.Key, Pair.Value->AsString());
+			}
+		}
+	}
+
+	return ResultMap;
 }
