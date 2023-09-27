@@ -20,7 +20,6 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(FOnCurrencyAmountFetchedBP, const FString&, Cu
 DECLARE_DYNAMIC_DELEGATE_OneParam(FHttpResponseReceivedDelegate, const FString&, ResponseData);
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnHttpResponseReceived, const FString&, ResponseContent);
 // Declare the delegate (if using a multi-cast delegate, use DECLARE_DYNAMIC_MULTICAST_DELEGATE)
-DECLARE_DYNAMIC_DELEGATE_TwoParams(FHttpResponseReceived, bool, bSuccess, const FString&, ResponseString);
 //DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHttpResponseReceived, bool, bWasSuccessful, FString, ResponseContent);
 
 
@@ -423,7 +422,7 @@ public:
 
 	// Displays the SInvoTicketWidget
 	UFUNCTION(BlueprintCallable, Category = "Invo")
-	static void InvoShowTicketWidget(FHttpResponseReceived ResponseContent);
+	static void InvoShowTicketWidget();
 
 	// Used to call for any UI Class
 	static void MakeHttpRequest(const FString& Url, const FString& HttpMethod, const FString& Content, TFunction<void(const bool, const FString&)> Callback);
@@ -431,8 +430,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Invo", meta = (DisplayName = "Make HTTP Request"))
 	static void MakeHttpRequestBP(const FString& Url, const FString& HttpMethod, const FString& Content, FOnHttpResponseReceived OnResponseReceived);
 
-	// Declare the delegate as a static member
-	static FHttpResponseReceived OnHttpResponseReceived;
+
 
 	/**
 	* Converts a JSON string to a Map (Key-Value pairs)

@@ -10,7 +10,7 @@
 UInvoHttpManager* UInvoHttpManager::Instance = nullptr;
 
 //Initialize the static delegate
-FHttpResponseReceived UInvoFunctions::OnHttpResponseReceived;
+//FHttpResponseReceived UInvoFunctions::OnHttpResponseReceived;
 
 
 UInvoHttpManager* UInvoHttpManager::GetInstance()
@@ -61,6 +61,11 @@ void UInvoHttpManager::MakeHttpRequest(const FString& URL, const FString& HttpMe
             if (Callback)
             {
                 Callback(bWasSuccessful, Response->GetContentAsString());
+                HttpRequestCompleted(Request, Response, bWasSuccessful);
+            }
+            else
+            {
+                UE_LOG(LogTemp, Warning, TEXT("No Call back "));
             }
         });
 
@@ -73,14 +78,18 @@ void UInvoHttpManager::HttpRequestCompleted(FHttpRequestPtr Request, FHttpRespon
     // If the request was not successful, fire the delegate with failure
     if (!bWasSuccessful)
     {
-        UInvoFunctions::OnHttpResponseReceived.ExecuteIfBound(false, TEXT("Request failed"));
+        OnHttpResponseReceived.Broadcast(false, TEXT("Request failed"));
+        //InvoOnHttpRequestCompletedEvent.Broadcast(bWasSuccessful, Response.IsValid() ? Response->GetContentAsString() : TEXT("Request Failed"));
+
         return;
     }
 
     // If the request was successful but the response is invalid, fire the delegate with failure
     if (!Response.IsValid())
     {
-        UInvoFunctions::OnHttpResponseReceived.ExecuteIfBound(false, TEXT("Invalid response"));
+        OnHttpResponseReceived.Broadcast(false, TEXT("Invalid response"));
+        //InvoOnHttpRequestCompletedEvent.Broadcast(bWasSuccessful, Response.IsValid() ? Response->GetContentAsString() : TEXT("Invalid Response"));
+
         return;
     }
 
@@ -88,14 +97,22 @@ void UInvoHttpManager::HttpRequestCompleted(FHttpRequestPtr Request, FHttpRespon
     if (EHttpResponseCodes::IsOk(Response->GetResponseCode()))
     {
         // The request was successful and the response is OK
-        UInvoFunctions::OnHttpResponseReceived.ExecuteIfBound(true, Response->GetContentAsString());
+        OnHttpResponseReceived.Broadcast(true, Response->GetContentAsString());
+        //InvoOnHttpRequestCompletedEvent.Broadcast(bWasSuccessful, Response.IsValid() ? Response->GetContentAsString() : TEXT("Success Response"));
+      
+       OnHttpRequestCompleted.Broadcast(bWasSuccessful, Response.IsValid() ? Response->GetContentAsString() : TEXT("Invalid Response"));
+        
+        
+
         return;  // Exit the function as the successful response has been handled
     }
     else
     {
         // The request was successful, but the server responded with an error
         FString ErrorMessage = FString::Printf(TEXT("HTTP Error: %d"), Response->GetResponseCode());
-        UInvoFunctions::OnHttpResponseReceived.ExecuteIfBound(false, ErrorMessage);
+        OnHttpResponseReceived.Broadcast(false, ErrorMessage);
+        //InvoOnHttpRequestCompletedEvent.Broadcast(bWasSuccessful, Response.IsValid() ? ErrorMessage : TEXT("Invalid Response"));
+
         return;  // Exit the function as the unsuccessful response has been handled
     }
 }

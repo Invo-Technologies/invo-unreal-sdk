@@ -98,7 +98,6 @@ void SInvoTicketWidget::Construct(const FArguments& InArgs)
                         ]
                 ]
         ];
-    SetupWidget();
 }
 
 // This function will be called when the HTTP request completes.

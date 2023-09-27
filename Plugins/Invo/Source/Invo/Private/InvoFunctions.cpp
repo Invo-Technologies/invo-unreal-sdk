@@ -1218,7 +1218,7 @@ void UInvoFunctions::InvoShowTicketWidget(FHttpResponseReceived ResponseContent)
 }
 */
 
-void UInvoFunctions::InvoShowTicketWidget(FHttpResponseReceived ResponseContent)
+void UInvoFunctions::InvoShowTicketWidget()
 {
 	// Create a Ticket Widget instance
 	
