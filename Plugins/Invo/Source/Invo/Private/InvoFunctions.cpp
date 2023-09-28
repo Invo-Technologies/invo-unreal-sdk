@@ -8,7 +8,9 @@
 #include "Engine/NetConnection.h"
 #include "Engine/GameViewportClient.h"
 #include "GameFramework/WorldSettings.h"
+
 #include "InvoHttpManager.h"
+#include "SInvoGDPRWidget.h"
 
 #include "Misc/OutputDeviceRedirector.h"
 #include "Runtime/Core/Public/Misc/Paths.h" // web brouser
@@ -1249,6 +1251,19 @@ void UInvoFunctions::InvoShowTicketWidget()
 }
 
 
+void UInvoFunctions::InvoShowGDPRWidget()
+{
+	// Create a GDPR Widget instance
+	Window = SNew(SWindow)
+		.Title(NSLOCTEXT("InvoGDPR", "WindowTitle", "Invo GDPR"))
+		.ClientSize(FVector2D(700, 200))
+		.SupportsMinimize(true)
+		.SupportsMaximize(true);
+
+	Window->SetContent(SNew(SInvoGDPRWidget));
+
+	FSlateApplication::Get().AddWindow(Window);
+}
 
 TMap<FString, FString> UInvoFunctions::InvoConvertJSONStringToMap(const FString& JSONString)
 {

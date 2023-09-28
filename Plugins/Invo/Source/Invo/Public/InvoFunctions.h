@@ -424,6 +424,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Invo")
 	static void InvoShowTicketWidget();
 
+	// Displays the SInvoTicketWidget
+	UFUNCTION(BlueprintCallable, Category = "Invo")
+	static void InvoShowGDPRWidget();
+
 	// Used to call for any UI Class
 	static void MakeHttpRequest(const FString& Url, const FString& HttpMethod, const FString& Content, TFunction<void(const bool, const FString&)> Callback);
 
