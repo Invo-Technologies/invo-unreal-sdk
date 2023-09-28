@@ -13,10 +13,15 @@
 class SWebBrowser;
 class SWindow;
 class FJsonObject;
-
+class SInvoTicketWidget;
 // For CallBack Functions 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnInvoAPICallCompleted, bool, bSuccess);
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnCurrencyAmountFetchedBP, const FString&, CurrencyAmount);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FHttpResponseReceivedDelegate, const FString&, ResponseData);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnHttpResponseReceived, const FString&, ResponseContent);
+// Declare the delegate (if using a multi-cast delegate, use DECLARE_DYNAMIC_MULTICAST_DELEGATE)
+//DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHttpResponseReceived, bool, bWasSuccessful, FString, ResponseContent);
+
 
 
 
@@ -146,6 +151,7 @@ struct FCurrencyData
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FFetchCurrenciesCompleted, const TArray<FCurrencyData>&, Currencies);
 
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnTicketSubmissionComplete,TArray<FString>, ResponseContent);
 
 
 USTRUCT(BlueprintType)
@@ -240,6 +246,35 @@ public:
 		FString BillingAddress;
 };
 
+/*
+UENUM(BlueprintType)
+enum class EPriority : uint8
+{
+	Low UMETA(DisplayName = "Low"),
+	Medium UMETA(DisplayName = "Medium"),
+	High UMETA(DisplayName = "High")
+};
+
+USTRUCT(BlueprintType) // This allows the struct to be used in Blueprints
+struct FTicketData
+{
+	GENERATED_BODY() // This is required for Unreal's reflection system
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ticket")
+	FString TicketTitle;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ticket")
+	FString Description;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ticket")
+	TEnumAsByte<EPriority> Priority; // Assuming you have an enum called EPriority
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ticket")
+	FString AttachmentPath; // Path to the attached file, if any
+};
+
+
+*/
 
 /**
  *
@@ -258,7 +293,7 @@ public:
 	* @return [bool] True if valid UNetConnection was found from PlayerController. False otherwise.
 	**/
 	UFUNCTION(BlueprintPure, Category = "Fun ", meta = (WorldContext = "WorldContextObject"))
-		static bool GetMaxPacket(const UObject* WorldContextObject, int32& OutMaxPacket);
+	static bool GetMaxPacket(const UObject* WorldContextObject, int32& OutMaxPacket);
 
 
 	// Get the plugin version number
@@ -278,7 +313,7 @@ public:
 	* @param OutMaxPacket [int32&] Maximum packet size.
 	**/
 	UPROPERTY(config, EditAnywhere, Category = Settings)
-		FString Account_ID;
+	FString Account_ID;
 
 	/**
 	* Applications ID or Game_ID
@@ -286,7 +321,7 @@ public:
 	* @return [bool] True if valid UNetConnection was found from PlayerController. False otherwise.
 	**/
 	UPROPERTY(config, EditAnywhere, Category = Settings)
-		FString Game_ID;
+	uint32 Game_ID;
 
 
 	/**
@@ -297,7 +332,6 @@ public:
 	**/
 	UPROPERTY(config, EditAnywhere, Category = Settings)
 		EBabeNodeSetting Node;
-
 
 	/**
 	* This is the name of the game's default resource that will be traded on the INVO exchange.
@@ -329,59 +363,82 @@ public:
 
 
 	UFUNCTION(BlueprintPure, Category = "Invo ", meta = (WorldContext = "WorldContextObject"))
-		static bool InvoTestCall(const UObject* WorldContextObject, int32& OutMaxPacket);
+	static bool InvoTestCall(const UObject* WorldContextObject, int32& OutMaxPacket);
 
 
 	UFUNCTION(BlueprintCallable, Category = "Invo ", meta = (WorldContext = "WorldContextObject"))
-		void InvoTestCallBeta(const UObject* WorldContextObjects);
+	void InvoTestCallBeta(const UObject* WorldContextObjects);
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
-		static FInvoAssetData GetInvoUserSettingsInput();
+	static FInvoAssetData GetInvoUserSettingsInput();
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
-		static void GetInvoFacts();
+	static void GetInvoFacts();
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
-		static void OpenInvoWebPage(UObject* WorldContextObject, FString Url);
+	static void OpenInvoWebPage(UObject* WorldContextObject, FString Url);
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
-		static void CloseInvoWebBrowser();
+	static void CloseInvoWebBrowser();
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
-		static void GetInvoFunctionOne(FOnInvoAPICallCompleted OnCompleted);
+	static void GetInvoFunctionOne(FOnInvoAPICallCompleted OnCompleted);
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
-		static void GetInvoFunctionTwo(FOnInvoAPICallCompleted OnCompleted);
-
-
-	UFUNCTION(BlueprintCallable, Category = "Invo")
-		static void GetInvoFunctionThree(FOnInvoAPICallCompleted OnCompleted);
+	static void GetInvoFunctionTwo(FOnInvoAPICallCompleted OnCompleted);
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
-		static void InvoAPICallFunction(FOnInvoAPICallCompleted OnCompleted);
+	static void GetInvoFunctionThree(FOnInvoAPICallCompleted OnCompleted);
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
-		static void GetInvoEthBlockNumberBP(FOnInvoAPICallCompleted OnBlockNumberReceived);
+	static void InvoAPICallFunction(FOnInvoAPICallCompleted OnCompleted);
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
-		static void RegisterInvoGameDevBP(FOnInvoAPICallCompleted OnRegisteredDatabaseReceived);
+	static void GetInvoEthBlockNumberBP(FOnInvoAPICallCompleted OnBlockNumberReceived);
+
+	UFUNCTION(BlueprintCallable, Category = "Invo")
+	static void RegisterInvoGameDevBP(FOnInvoAPICallCompleted OnRegisteredDatabaseReceived);
 
 	// Blueprint function for transferring currency
 	UFUNCTION(BlueprintCallable, Category = "Invo")
-		static void TransferCurrencyBP(int64 SourceGameID, int64 SourcePlayerID, int64 TargetGameID, int64 TargetPlayerID, float Amount, FString CurrencyName, FOnInvoAPICallCompleted OnTransferCompleted);
+	static void TransferCurrencyBP(int64 SourceGameID, int64 SourcePlayerID, int64 TargetGameID, int64 TargetPlayerID, float Amount, FString CurrencyName, FOnInvoAPICallCompleted OnTransferCompleted);
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
-		static void InvoTransferCurrencyWebViewBP(FOnInvoAPICallCompleted OnTransferCompleted);
+	static void InvoTransferCurrencyWebViewBP(FOnInvoAPICallCompleted OnTransferCompleted);
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
-		static void FetchCurrenciesForUserBP(int64 GameID, int64 PlayerID, FFetchCurrenciesCompleted Completed);
+	static void FetchCurrenciesForUserBP(int64 GameID, int64 PlayerID, FFetchCurrenciesCompleted Completed);
 
 	static void GetInvoCurrencyAmountForPlayer(int64 GameID, int64 PlayerID, TFunction<void(const FString&)> OnCurrencyAmountFetched);
 
 	UFUNCTION(BlueprintCallable, Category = "Invo", meta = (DisplayName = "Get Currency Amount For Player in BP"))
-		static void GetInvoCurrencyAmountForPlayerBP(int64 GameID, int64 PlayerID, const FOnCurrencyAmountFetchedBP& OnCurrencyAmountFetchedBP);
+	static void GetInvoCurrencyAmountForPlayerBP(int64 GameID, int64 PlayerID, const FOnCurrencyAmountFetchedBP& OnCurrencyAmountFetchedBP);
 
 	static bool bIsTransferCompleted;
+
+	// Binds the F1 key to show the ticket widget
+	UFUNCTION(BlueprintCallable, Category = "Invo")
+	static void InvoBindTicketUIKey();
+
+	// Displays the SInvoTicketWidget
+	UFUNCTION(BlueprintCallable, Category = "Invo")
+	static void InvoShowTicketWidget();
+
+	// Used to call for any UI Class
+	static void MakeHttpRequest(const FString& Url, const FString& HttpMethod, const FString& Content, TFunction<void(const bool, const FString&)> Callback);
+
+	UFUNCTION(BlueprintCallable, Category = "Invo", meta = (DisplayName = "Make HTTP Request"))
+	static void MakeHttpRequestBP(const FString& Url, const FString& HttpMethod, const FString& Content, FOnHttpResponseReceived OnResponseReceived);
+
+
+
+	/**
+	* Converts a JSON string to a Map (Key-Value pairs)
+	* @param JSONString The JSON formatted string
+	* @return Map of Key-Value pairs parsed from the JSON
+	*/
+	UFUNCTION(BlueprintCallable, Category = "Invo")
+	static TMap<FString, FString> InvoConvertJSONStringToMap(const FString& JSONString);
 
 private:
 
@@ -402,10 +459,10 @@ private:
 	static void SimulateAPICall(FOnInvoAPICallCompleted OnCompleted);
 
 	UFUNCTION()
-		static void HandleURLChange(const FString& NewUrl);
+	static void HandleURLChange(const FString& NewUrl);
 
 	UFUNCTION()
-		static void OpenWebView(const FString& Url);
+	static void OpenWebView(const FString& Url);
 
 	static TSharedRef<SWebBrowser> WebBrowser;
 	static TSharedRef<SWindow> Window;
@@ -415,14 +472,12 @@ private:
 	static void RegisterInvoGameDev(TFunction<void(const FString&)> OnRegisteredDatabaseReceived);
 
 	static void TransferCurrency(int64 SourceGameID, int64 SourcePlayerID, int64 TargetGameID, int64 TargetPlayerID, float Amount, FString CurrencyName, TFunction<void(const FString&)> OnTransferCompleted);
-
+	
 	static void FetchCurrenciesForUser(int64 GameID, int64 PlayerID, TFunction<void(const TArray<FCurrencyData>&)> OnCurrenciesFetched);
 
-	/**
-	* This is for postgressSQL connections.
-	**/
+	static TSharedPtr<SInvoTicketWidget> InvoTicketWidget;
 
-
+	
 	//static TSharedRef<FJsonObject> JsonObjectTest;
 
 protected:

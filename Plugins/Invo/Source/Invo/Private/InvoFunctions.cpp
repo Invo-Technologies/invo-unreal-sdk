@@ -8,11 +8,12 @@
 #include "Engine/NetConnection.h"
 #include "Engine/GameViewportClient.h"
 #include "GameFramework/WorldSettings.h"
+#include "InvoHttpManager.h"
 
 #include "Misc/OutputDeviceRedirector.h"
 #include "Runtime/Core/Public/Misc/Paths.h" // web brouser
 #include "Runtime/Core/Public/HAL/PlatformProcess.h" // web browser
-
+#include "Http.h"
 #include "Runtime/Online/HTTP/Public/Http.h"
 #include "Dom/JsonObject.h"
 #include "Serialization/JsonReader.h"
@@ -63,6 +64,8 @@
 #include "Runtime/Slate/Public/Framework/Application/SlateApplication.h"
 #include "Runtime/Engine/Public/TimerManager.h"
 
+#include "SInvoTicketWidget.h"
+
 
 //#include "Engine/Plugins/Runtime/Database/DatabaseSupport/Public/DatabaseSupport.h"
 
@@ -79,6 +82,10 @@
 // Initialize the static shared references
 TSharedRef<SWebBrowser> UInvoFunctions::WebBrowser = SNew(SWebBrowser);
 TSharedRef<SWindow> UInvoFunctions::Window = SNew(SWindow);
+
+//Ticket Support
+TSharedPtr<SInvoTicketWidget> UInvoFunctions::InvoTicketWidget;
+
 
 bool UInvoFunctions::bIsTransferCompleted = false;
 
@@ -180,7 +187,7 @@ FInvoAssetData UInvoFunctions::GetInvoUserSettingsInput()
 	}
 
 	const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
-	UE_LOG(LogTemp, Warning, TEXT("Testing Game_ID fisrt %s"), *Settings->Game_ID)
+	UE_LOG(LogTemp, Warning, TEXT("Testing Game_ID fisrt %i"), Settings->Game_ID)
 
 
 		if (Settings)
@@ -704,6 +711,70 @@ void UInvoFunctions::MakeHttpRequest(const FString& Url, const FString& Method, 
 	HttpRequest->ProcessRequest();
 }
 
+void UInvoFunctions::MakeHttpRequest(const FString& Url, const FString& HttpMethod, const FString& Content, TFunction<void(const bool, const FString&)> Callback)
+{
+	// Create HTTP Request
+	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> HttpRequest = FHttpModule::Get().CreateRequest();
+
+	HttpRequest->SetURL(Url);
+	HttpRequest->SetVerb(HttpMethod);
+	HttpRequest->SetHeader(TEXT("User-Agent"), TEXT("X-UnrealEngine-Agent"));
+	HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+	HttpRequest->SetContentAsString(Content);
+
+	// Set the callback
+	HttpRequest->OnProcessRequestComplete().BindLambda([Callback](FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSuccess)
+		{
+			if (bSuccess && Response.IsValid())
+			{
+				// Execute the delegate with the response's content as a string.
+				Callback(bSuccess, Response->GetContentAsString());
+			}
+			else
+			{
+				// Handle the failure case. You can adjust this as per your requirements.
+				Callback(bSuccess, TEXT("Failed to get a valid response."));
+			}
+		});
+
+
+	// Finally, send the HTTP request.
+	HttpRequest->ProcessRequest();
+}
+
+void UInvoFunctions::MakeHttpRequestBP(const FString& Url, const FString& HttpMethod, const FString& Content, FOnHttpResponseReceived OnResponseReceived)
+{
+	// ... (same setup as before)
+		// Create HTTP Request
+	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> HttpRequest = FHttpModule::Get().CreateRequest();
+
+	HttpRequest->SetURL(Url);
+	HttpRequest->SetVerb(HttpMethod);
+	HttpRequest->SetHeader(TEXT("User-Agent"), TEXT("X-UnrealEngine-Agent"));
+	HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+	HttpRequest->SetContentAsString(Content);
+
+
+	HttpRequest->OnProcessRequestComplete().BindLambda([OnResponseReceived](FHttpRequestPtr Request, FHttpResponsePtr Response, bool bSuccess)
+		{
+			if (bSuccess && Response.IsValid())
+			{
+				OnResponseReceived.ExecuteIfBound(Response->GetContentAsString());
+			}
+			else
+			{
+				OnResponseReceived.ExecuteIfBound(TEXT("Failed to get a valid response."));
+			}
+		});
+
+
+	// Finally, send the HTTP request.
+	//HttpRequest->ProcessRequest();
+
+	// ... (send the request)
+}
+
+
 void UInvoFunctions::InvoAPIJsonReturnCall(const FString& City, FString& JsonData, TFunction<void(TSharedPtr<FJsonObject>)> Callback)
 {
 	FJsonObject JsonRespObject;
@@ -712,7 +783,7 @@ void UInvoFunctions::InvoAPIJsonReturnCall(const FString& City, FString& JsonDat
 
 	FString Asset_ID = Settings->AssetData.Asset_ID.Replace(TEXT(" "), TEXT("%20"));
 
-	FString Url = FString::Printf(TEXT("https://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s"), *City.Replace(TEXT(" "), TEXT("%20")), *Settings->Game_ID);
+	FString Url = FString::Printf(TEXT("https://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s"), *City.Replace(TEXT(" "), TEXT("%20")), Settings->Game_ID);
 
 	MakeHttpRequest(Url, TEXT("GET"), JsonData, [Callback](TSharedPtr<FJsonObject> JsonObject)
 		{
@@ -1087,4 +1158,117 @@ void UInvoFunctions::InvoTransferCurrencyWebViewBP(FOnInvoAPICallCompleted OnTra
 	OpenWebView(Url);
 	OnTransferCompleted.ExecuteIfBound(UInvoFunctions::bIsTransferCompleted);
 
+}
+
+
+
+
+void UInvoFunctions::InvoBindTicketUIKey()
+{
+
+	UWorld* World = GWorld->GetWorld();
+	if (World)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Green, "Invo Show InvoBindTicketUIKey ");
+
+		APlayerController* PC = World->GetFirstPlayerController();
+		if (PC && PC->InputComponent)
+		{
+			//PC->SetInputMode(FInputModeUIOnly());
+			//PC->bShowMouseCursor = true;
+			//UInvoFunctions::InvoShowTicketWidget();
+			//PC->InputComponent->BindKey(EKeys::F1, IE_Pressed, PC, [PC]()
+			//{
+			//	UInvoFunctions::InvoShowTicketWidget();
+			//});
+		}
+	}
+}
+
+
+/*
+void UInvoFunctions::InvoShowTicketWidget(FHttpResponseReceived ResponseContent)
+{
+
+	// Ensure we don't already have the widget open
+	//if (!InvoTicketWidget.IsValid())
+	//{
+	//	SAssignNew(InvoTicketWidget, SInvoTicketWidget);
+	//
+	//	if (GEngine && GEngine->GameViewport)
+	//	{
+	//		GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Green, "Invo Game viewport open  ");
+	//
+	//		GEngine->GameViewport->AddViewportWidgetContent(SNew(SWeakWidget).PossiblyNullContent(InvoTicketWidget.ToSharedRef()));
+	//
+	//	}
+	//}
+
+
+	Window = SNew(SWindow)
+		.Title(NSLOCTEXT("InvoTicket", "WindowTitle", "Invo Ticket System"))
+		.ClientSize(FVector2D(600, 500))
+		.SupportsMinimize(true)
+		.SupportsMaximize(true);
+
+	Window->SetContent(SNew(SInvoTicketWidget));
+
+	FSlateApplication::Get().AddWindow(Window);
+
+}
+*/
+
+void UInvoFunctions::InvoShowTicketWidget()
+{
+	// Create a Ticket Widget instance
+	
+
+	Window = SNew(SWindow)
+		.Title(NSLOCTEXT("InvoTicket", "WindowTitle", "Invo Ticket System"))
+		.ClientSize(FVector2D(600, 500))
+		.SupportsMinimize(true)
+		.SupportsMaximize(true);
+
+	Window->SetContent(SNew(SInvoTicketWidget));
+
+	FSlateApplication::Get().AddWindow(Window);
+
+	
+	/*
+	// Bind the ResponseContent delegate to the HttpRequestCompleted method of UInvoHttpManager
+	UInvoHttpManager::GetInstance()->OnHttpRequestCompleted.AddLambda([ResponseContent](FHttpRequestPtr Request, FHttpResponsePtr HttpResponse, bool bSuccess)
+		{
+			// Extract content from the HttpResponse
+			FString ContentString = HttpResponse.IsValid() ? HttpResponse->GetContentAsString() : TEXT("Invalid Response");
+
+			// Execute the provided delegate
+			ResponseContent.ExecuteIfBound(bSuccess, ContentString);
+		});
+	*/
+	
+}
+
+
+
+TMap<FString, FString> UInvoFunctions::InvoConvertJSONStringToMap(const FString& JSONString)
+{
+	TMap<FString, FString> ResultMap;
+
+
+	TSharedPtr<FJsonObject> JsonObject;
+	TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(JSONString);
+
+
+	if (FJsonSerializer::Deserialize(Reader, JsonObject) && JsonObject.IsValid())
+	{
+		for (auto Pair : JsonObject->Values)
+		{
+			if (Pair.Value.IsValid() && Pair.Value->Type == EJson::String)
+			{
+				ResultMap.Add(Pair.Key, Pair.Value->AsString());
+			}
+		}
+	}
+
+	return ResultMap;
 }
