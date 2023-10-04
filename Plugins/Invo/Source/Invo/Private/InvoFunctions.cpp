@@ -8,9 +8,14 @@
 #include "Engine/NetConnection.h"
 #include "Engine/GameViewportClient.h"
 #include "GameFramework/WorldSettings.h"
+#include "Misc/AES.h"
+#include "Misc/Base64.h"
+
 
 #include "InvoHttpManager.h"
 #include "SInvoGDPRWidget.h"
+#include "SInvoTicketWidget.h"
+#include "SInvoTransferWidget.h"
 
 #include "Misc/OutputDeviceRedirector.h"
 #include "Runtime/Core/Public/Misc/Paths.h" // web brouser
@@ -66,7 +71,6 @@
 #include "Runtime/Slate/Public/Framework/Application/SlateApplication.h"
 #include "Runtime/Engine/Public/TimerManager.h"
 
-#include "SInvoTicketWidget.h"
 
 
 //#include "Engine/Plugins/Runtime/Database/DatabaseSupport/Public/DatabaseSupport.h"
@@ -87,6 +91,7 @@ TSharedRef<SWindow> UInvoFunctions::Window = SNew(SWindow);
 
 //Ticket Support
 TSharedPtr<SInvoTicketWidget> UInvoFunctions::InvoTicketWidget;
+TSharedPtr<SInvoTransferWidget> UInvoFunctions::InvoTransferWidget;
 
 
 bool UInvoFunctions::bIsTransferCompleted = false;
@@ -498,6 +503,88 @@ void UInvoFunctions::HandleURLChange(const FString& NewUrl)
 
 
 	}
+	else if (NewUrl.Contains(TEXT("auth")))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("New outer loop URL is %s"), *NewUrl);
+
+		FString HtmlContent;
+		FString Url = TEXT("https://api.dev.ourinvo.com"); // Replace with your API endpoint URL
+
+		TSharedRef<IHttpRequest, ESPMode::ThreadSafe> HttpRequest = FHttpModule::Get().CreateRequest();
+		HttpRequest->SetVerb(TEXT("GET"));
+		HttpRequest->SetURL(Url);
+
+		HttpRequest->OnProcessRequestComplete().BindLambda([](FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful)
+			{
+				if (bWasSuccessful && Response.IsValid())
+				{
+
+					FString HtmlContent = Response->GetContentAsString();
+
+					// Now you have the HTML content in 'HtmlContent'
+					UE_LOG(LogTemp, Warning, TEXT("HTML Content: %s"), *HtmlContent);
+
+					// Parse the HTML content and extract the 'code' value as shown in the previous response.
+				}
+				else
+				{
+					UE_LOG(LogTemp, Error, TEXT("HTTP Request Failed"));
+				}
+			});
+
+		HttpRequest->ProcessRequest();
+
+
+		
+		// Access the game thread
+		FGraphEventRef Task = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
+			{
+				
+				if (Window.ToSharedPtr().IsValid() && WebBrowser.ToSharedPtr().IsValid())
+				{
+				//	HandleJavaScriptTestCallback("code", WebBrowser);
+					UE_LOG(LogTemp, Warning, TEXT("Nwe URL is %s"), *NewUrl);
+					// Assuming you have the HTML content as a FString named HtmlContent
+					FString JsonString;
+					// Find the start and end of the JSON string within the HTML content
+					/*if (HtmlContent.FindChar('{', m) != INDEX_NONE && HtmlContent.FindLastChar('}', m) != INDEX_NONE)
+					{
+						// Extract the JSON string between '{' and '}'
+						int32 StartIndex = HtmlContent.FindChar('{', m);
+						int32 EndIndex = HtmlContent.FindLastChar('}', m);
+
+						if (StartIndex != INDEX_NONE && EndIndex != INDEX_NONE)
+						{
+							JsonString = HtmlContent.Mid(StartIndex, EndIndex - StartIndex + 1);
+
+							// Now you have the JSON string, which is: {"code":"4/0AfJohXlyZPD_fDU4yk10MWElowiN020oZF6rjVounr2EEc_4kpJ6WopKD1cMrSYI7Oubyg","message":"Code Saved"}
+						}
+					}
+					*/
+
+					// Parse the JSON string
+					TSharedPtr<FJsonObject> JsonObject;
+					TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(JsonString);
+					if (FJsonSerializer::Deserialize(Reader, JsonObject))
+					{
+						FString CodeValue;
+						if (JsonObject->TryGetStringField("code", CodeValue))
+						{
+							// CodeValue now contains the value of the "code" field
+							UE_LOG(LogTemp, Warning, TEXT("Code Value: %s"), *CodeValue);
+						}
+					}
+
+				}
+
+
+			}, TStatId(), nullptr, ENamedThreads::GameThread);
+	}
+	else {
+
+		UE_LOG(LogTemp, Warning, TEXT("None loop URL is %s"), *NewUrl);
+
+	}
 
 	// Add more conditions for other URL changes if needed
 	// else if (NewUrl.Contains(TEXT("PageA"))) { ... }
@@ -515,6 +602,17 @@ void UInvoFunctions::OpenInvoWebPage(UObject* WorldContextObject, FString Url = 
 	FString ReactWepPageUrl = "http://localhost:5173/";
 	OpenWebView(ReactWepPageUrl);
 }
+
+void UInvoFunctions::OpenInvoInitWebPage(UObject* WorldContextObject, FString Url = "")
+{
+	//FString URL = TEXT("https://www.ourinvo.com");
+	//FPlatformProcess::LaunchURL(*URL, nullptr, nullptr);
+	// React Local Sample Page Ui http://localhost:5173/
+	// Get the Unreal Engine version.
+	FString ReactWepPageUrl = "https://api.dev.ourinvo.com/";
+	OpenWebView(ReactWepPageUrl);
+}
+
 
 
 void UInvoFunctions::CloseInvoWebBrowser()
@@ -619,6 +717,32 @@ void UInvoFunctions::HandleJavaScriptTestCallback(const FString& Message, TShare
 					{
 						FString Description = WeatherObject->GetStringField("description");
 						UE_LOG(LogTemp, Warning, TEXT("Weather description: %s"), *Description);
+						FString Message = FString::Printf(TEXT("Weather Descripions is %s"), *Description);
+						GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Green, Message);
+					}
+				}
+
+			});
+
+	}
+	else if (Message == "auth")
+	{
+		FString JsonData = TEXT("");
+		InvoAPIJsonReturn(TEXT("https://api.dev.ourinvo.com/"), JsonData, [](TSharedPtr<FJsonObject> JsonObject)
+			{
+				// Do something with JsonObject
+				// This will be called when the HTTP request completes
+
+				TArray<TSharedPtr<FJsonValue>> Data = JsonObject->GetArrayField("code");
+				for (int32 Index = 0; Index != Data.Num(); ++Index)
+				{
+					// Get the weather object
+					TSharedPtr<FJsonObject> DataObject = Data[Index]->AsObject();
+
+					if (DataObject.IsValid())
+					{
+						FString Description = DataObject->GetStringField("code");
+						UE_LOG(LogTemp, Warning, TEXT("Auth Code description: %s"), *Description);
 						FString Message = FString::Printf(TEXT("Weather Descripions is %s"), *Description);
 						GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Green, Message);
 					}
@@ -788,6 +912,27 @@ void UInvoFunctions::InvoAPIJsonReturnCall(const FString& City, FString& JsonDat
 	FString Url = FString::Printf(TEXT("https://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s"), *City.Replace(TEXT(" "), TEXT("%20")), Settings->Game_ID);
 
 	MakeHttpRequest(Url, TEXT("GET"), JsonData, [Callback](TSharedPtr<FJsonObject> JsonObject)
+		{
+			if (JsonObject.IsValid())
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Its working on the you."));
+
+				Callback(JsonObject);
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Failed to get weather data"));
+			}
+		});
+}
+
+void UInvoFunctions::InvoAPIJsonReturn(const FString& Endpoint, FString& JsonData, TFunction<void(TSharedPtr<FJsonObject>)> Callback)
+{
+	FJsonObject JsonRespObject;
+
+	const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
+
+	MakeHttpRequest(Endpoint, TEXT("GET"), JsonData, [Callback](TSharedPtr<FJsonObject> JsonObject)
 		{
 			if (JsonObject.IsValid())
 			{
@@ -1262,6 +1407,19 @@ void UInvoFunctions::InvoShowGDPRWidget()
 
 	Window->SetContent(SNew(SInvoGDPRWidget));
 
+	FSlateApplication::Get().AddWindow(Window);
+}
+
+void UInvoFunctions::InvoShowTransferWidget()
+{
+	// Create a InvoTransfer Widget instance
+	Window = SNew(SWindow)
+		.Title(NSLOCTEXT("InvoTransfer", "WindowTitle", "Invo Transfer System"))
+		.ClientSize(FVector2D(500, 500))
+		.SupportsMinimize(true)
+		.SupportsMaximize(true);
+
+	Window->SetContent(SNew(SInvoTransferWidget));
 	FSlateApplication::Get().AddWindow(Window);
 }
 

@@ -14,6 +14,8 @@ class SWebBrowser;
 class SWindow;
 class FJsonObject;
 class SInvoTicketWidget;
+class SInvoTransferWidget;
+
 // For CallBack Functions 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnInvoAPICallCompleted, bool, bSuccess);
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnCurrencyAmountFetchedBP, const FString&, CurrencyAmount);
@@ -379,6 +381,9 @@ public:
 	static void OpenInvoWebPage(UObject* WorldContextObject, FString Url);
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
+	static void OpenInvoInitWebPage(UObject* WorldContextObject, FString Url);
+
+	UFUNCTION(BlueprintCallable, Category = "Invo")
 	static void CloseInvoWebBrowser();
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
@@ -428,6 +433,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Invo")
 	static void InvoShowGDPRWidget();
 
+	// Displays the SInvoTicketWidget
+	UFUNCTION(BlueprintCallable, Category = "Invo")
+	static void InvoShowTransferWidget();
+
+
 	// Used to call for any UI Class
 	static void MakeHttpRequest(const FString& Url, const FString& HttpMethod, const FString& Content, TFunction<void(const bool, const FString&)> Callback);
 
@@ -460,6 +470,8 @@ private:
 
 	static void InvoAPIJsonReturnCall(const FString& City, FString& JsonData, TFunction<void(TSharedPtr<FJsonObject>)> Callback);
 
+	static void InvoAPIJsonReturn(const FString& EndPoint, FString& JsonData, TFunction<void(TSharedPtr<FJsonObject>)> Callback);
+
 	static void SimulateAPICall(FOnInvoAPICallCompleted OnCompleted);
 
 	UFUNCTION()
@@ -480,6 +492,8 @@ private:
 	static void FetchCurrenciesForUser(int64 GameID, int64 PlayerID, TFunction<void(const TArray<FCurrencyData>&)> OnCurrenciesFetched);
 
 	static TSharedPtr<SInvoTicketWidget> InvoTicketWidget;
+
+	static TSharedPtr<SInvoTransferWidget> InvoTransferWidget;
 
 	
 	//static TSharedRef<FJsonObject> JsonObjectTest;
