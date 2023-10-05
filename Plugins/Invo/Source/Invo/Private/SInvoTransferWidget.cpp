@@ -16,7 +16,7 @@
 #include "Runtime/Online/HTTP/Public/Interfaces/IHttpResponse.h"
 #include "Runtime/Core/Public/GenericPlatform/GenericPlatformMisc.h"
 #include "Runtime/Core/Public/Misc/MessageDialog.h"
-
+#include "Runtime/SlateCore/Public/Widgets/SWidget.h"
 
 void SInvoTransferWidget::Construct(const FArguments& InArgs)
 {

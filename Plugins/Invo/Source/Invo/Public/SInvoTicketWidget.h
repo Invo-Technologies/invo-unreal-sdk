@@ -4,6 +4,8 @@
 #include "Widgets/SCompoundWidget.h"
 #include "Widgets/Input/SEditableTextBox.h"
 #include "Widgets/Input/SMultiLineEditableTextBox.h"
+#include "Runtime/Slate/Public/Widgets/Input/SComboBox.h"
+#include "Runtime/SlateCore/Public/Widgets/SWidget.h"
 
 class SInvoTicketWidget : public SCompoundWidget
 {

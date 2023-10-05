@@ -3,7 +3,10 @@
 #include "CoreMinimal.h"
 #include "Widgets/SCompoundWidget.h"
 #include "Widgets/Input/SEditableTextBox.h"
+#include "Runtime/Slate/Public/Widgets/Input/SComboBox.h"
 #include "Widgets/Input/SMultiLineEditableTextBox.h"
+
+class SEditableTextBox;
 
 class SInvoTransferWidget : public SCompoundWidget
 {
