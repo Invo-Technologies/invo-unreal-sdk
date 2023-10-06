@@ -502,6 +502,8 @@ private:
 
 	static TSharedPtr<SInvoPurchaseWidget> InvoPurchaseWidget;
 
+	static FString ExtractCodeFromHTMLSource(const FString& HtmlSource);
+	static FString ExtractCodeFromUrl(const FString& Url);
 
 	
 	//static TSharedRef<FJsonObject> JsonObjectTest;

@@ -12,6 +12,8 @@
 #include "Misc/Base64.h"
 
 #include "InvoHttpManager.h"
+#include <regex>
+
 
 // UI Widgets 
 #include "SInvoGDPRWidget.h"
@@ -343,9 +345,13 @@ void UInvoFunctions::OpenWebView(const FString& Url)
 				// Handle URL changes here
 				UE_LOG(LogTemp, Warning, TEXT("Testing %s"), *NewUrl);
 
+				FString AuthCode = ExtractCodeFromUrl(NewUrl);
+				UInvoHttpManager::GetInstance()->SetAuthCode(AuthCode);
+				UE_LOG(LogTemp, Warning, TEXT("AuthCode is %s"), *AuthCode);
 				HandleURLChange(NewUrl);
-
-					});
+				
+				
+				});
 
 
 			if (!Window->IsActive())
@@ -505,10 +511,21 @@ void UInvoFunctions::HandleURLChange(const FString& NewUrl)
 
 
 	}
-	else if (NewUrl.Contains(TEXT("auth")))
+	else if (NewUrl.Contains(TEXT("/external/auth/callback")))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("New outer loop URL is %s"), *NewUrl);
+		// Access the game thread
+		FGraphEventRef Task = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
+			{
+				if (Window.ToSharedPtr().IsValid() && WebBrowser.ToSharedPtr().IsValid())
+				{
+					//HandleJavaScriptCallback("ButtonClicked", WebBrowser);
+					//HandleJavaScriptTestCallback("Transfer", WebBrowser);
+					FSlateApplication::Get().RequestDestroyWindow(Window);
+				}
+			}, TStatId(), nullptr, ENamedThreads::GameThread);
 
+
+		/*
 		FString HtmlContent;
 		FString Url = TEXT("https://api.dev.ourinvo.com"); // Replace with your API endpoint URL
 
@@ -536,7 +553,9 @@ void UInvoFunctions::HandleURLChange(const FString& NewUrl)
 
 		HttpRequest->ProcessRequest();
 
+		*/
 
+		/*
 		
 		// Access the game thread
 		FGraphEventRef Task = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
@@ -549,7 +568,7 @@ void UInvoFunctions::HandleURLChange(const FString& NewUrl)
 					// Assuming you have the HTML content as a FString named HtmlContent
 					FString JsonString;
 					// Find the start and end of the JSON string within the HTML content
-					/*if (HtmlContent.FindChar('{', m) != INDEX_NONE && HtmlContent.FindLastChar('}', m) != INDEX_NONE)
+					if (HtmlContent.FindChar('{', m) != INDEX_NONE && HtmlContent.FindLastChar('}', m) != INDEX_NONE)
 					{
 						// Extract the JSON string between '{' and '}'
 						int32 StartIndex = HtmlContent.FindChar('{', m);
@@ -562,7 +581,7 @@ void UInvoFunctions::HandleURLChange(const FString& NewUrl)
 							// Now you have the JSON string, which is: {"code":"4/0AfJohXlyZPD_fDU4yk10MWElowiN020oZF6rjVounr2EEc_4kpJ6WopKD1cMrSYI7Oubyg","message":"Code Saved"}
 						}
 					}
-					*/
+					
 
 					// Parse the JSON string
 					TSharedPtr<FJsonObject> JsonObject;
@@ -581,13 +600,16 @@ void UInvoFunctions::HandleURLChange(const FString& NewUrl)
 
 
 			}, TStatId(), nullptr, ENamedThreads::GameThread);
+
+		*/
 	}
-	else {
+	else 
+	{
 
 		UE_LOG(LogTemp, Warning, TEXT("None loop URL is %s"), *NewUrl);
 
 	}
-
+	
 	// Add more conditions for other URL changes if needed
 	// else if (NewUrl.Contains(TEXT("PageA"))) { ... }
 	// else if (NewUrl.Contains(TEXT("PageB"))) { ... }
@@ -1459,4 +1481,56 @@ TMap<FString, FString> UInvoFunctions::InvoConvertJSONStringToMap(const FString&
 	}
 
 	return ResultMap;
+}
+
+FString UInvoFunctions::ExtractCodeFromHTMLSource(const FString& HtmlSource)
+{
+	std::wstring Source(*HtmlSource); // Convert FString to std::wstring
+	std::wregex Pattern(L"\"code\":\"([^\"]+)\""); // Regular expression pattern to match "code":"<value>"
+	std::wsmatch Matches;
+
+	if (std::regex_search(Source, Matches, Pattern) && Matches.size() > 1)
+	{
+		// Convert the matched value to FString and return
+		return FString(Matches[1].str().c_str());
+	}
+
+	// Return an empty string if the pattern wasn't found
+	return FString();
+}
+
+FString UInvoFunctions::ExtractCodeFromUrl(const FString& Url)
+{
+	// Split the URL by '?' to get the query parameters
+	TArray<FString> UrlParts;
+	Url.ParseIntoArray(UrlParts, TEXT("?"), true);
+	FString CodeValue = "";
+	if (UrlParts.Num() > 1)
+	{
+		// Split the query parameters by '&'
+		TArray<FString> QueryParams;
+		UrlParts[1].ParseIntoArray(QueryParams, TEXT("&"), true);
+
+		for (FString Param : QueryParams)
+		{
+			// Split each parameter by '=' to get the key-value pair
+			TArray<FString> KeyValue;
+			Param.ParseIntoArray(KeyValue, TEXT("="), true);
+
+			if (KeyValue.Num() > 1 && KeyValue[0] == TEXT("code"))
+			{
+				// If the key is "code", store its value
+
+				FString LocalCodeValue = KeyValue[1];
+				FString DecodedCode = FGenericPlatformHttp::UrlDecode(LocalCodeValue);
+				CodeValue = DecodedCode; // Store t
+				UE_LOG(LogTemp, Warning, TEXT("Extracted Code from URL: %s"), *CodeValue);
+
+				// You can now use the CodeValue for any further processing you need
+				return CodeValue;
+			}
+		}
+	}
+	return CodeValue;
+
 }

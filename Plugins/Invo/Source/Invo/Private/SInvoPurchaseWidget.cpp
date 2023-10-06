@@ -16,7 +16,6 @@
 #include "Runtime/Core/Public/Misc/MessageDialog.h"
 #include "Runtime/SlateCore/Public/Widgets/SWidget.h"
 
-
 #include "Misc/Paths.h"
 #include "Misc/FeedbackContext.h"
 #include "Misc/ScopedSlowTask.h"
@@ -45,7 +44,7 @@ void SInvoPurchaseWidget::Construct(const FArguments& InArgs)
                 + SVerticalBox::Slot()
                 .FillHeight(0.8f) // Change this as per your needs
                 [
-                    SNew(SWebBrowser)
+                    SAssignNew(WebBrowser, SWebBrowser)
                         .InitialURL(TEXT("http://localhost:5173/")) // Set your desired URL here
                         .OnUrlChanged(this, &SInvoPurchaseWidget::OnBrowserUrlChanged) // <-- Add this line
 
@@ -101,8 +100,18 @@ void SInvoPurchaseWidget::SetupWidget()
 
 FReply SInvoPurchaseWidget::OnPurchaseClicked()
 {
-    
-
+    /* if (WebBrowser.IsValid())
+    {
+        
+        WebBrowser->GetSource([this](const FString& Result) {
+            FString HtmlString = Result;
+            FString CodeValue = ExtractCodeFromHTMLSource(HtmlString);
+            UE_LOG(LogTemp, Warning, TEXT("Extracted Code: %s"), *CodeValue);
+             
+            });
+        
+    }
+    */
     return FReply::Handled();
 }
 
@@ -220,3 +229,4 @@ void SInvoPurchaseWidget::OnBrowserUrlChanged(const FText& NewUrl)
         CloseTicketWidget();
     }
 }
+

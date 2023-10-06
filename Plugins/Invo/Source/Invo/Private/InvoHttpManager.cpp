@@ -28,6 +28,14 @@ void UInvoHttpManager::MakeHttpRequest(const FString& URL, const FString& HttpMe
     // Create HTTP Request
     TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
 
+    if (AuthCode.IsEmpty())
+    {
+        // Trigger Google authentication process again
+        // Maybe show a message to the user or log it
+        UE_LOG(LogTemp, Warning, TEXT("Auth code not available. Please authenticate again."));
+        return;
+    }
+
     // Set HTTP method (GET, POST, PUT, etc.)
     Request->SetVerb(HttpMethod);
 
@@ -49,6 +57,7 @@ void UInvoHttpManager::MakeHttpRequest(const FString& URL, const FString& HttpMe
     }
     // Set headers, if any
  
+    Request->SetHeader(TEXT("auth_code"), AuthCode);
 
     Request->SetContentAsString(Payload);
 
@@ -118,4 +127,9 @@ void UInvoHttpManager::HttpRequestCompleted(FHttpRequestPtr Request, FHttpRespon
 }
 
 /**/
+
+void UInvoHttpManager::SetAuthCode(FString AuthCodeString)
+{
+    AuthCode = AuthCodeString;
+}
 

@@ -6,7 +6,11 @@
 #include "Runtime/Slate/Public/Widgets/Input/SComboBox.h"
 #include "Widgets/Input/SMultiLineEditableTextBox.h"
 
+
+DECLARE_DELEGATE_OneParam(FOnGetSourceComplete, const FString&);
+
 class SEditableTextBox;
+class SWebBrowser;
 
 class SInvoPurchaseWidget : public SCompoundWidget
 {
@@ -18,6 +22,10 @@ public:
     void SetupWidget();
     void HandleHttpRequestCompleted(bool bWasSuccessful, const FString& ResponseContent);
     void HandlePurchaseCompleted();
+
+    UPROPERTY(BlueprintAssignable, Category = "Invo")
+    FOnGetSourceComplete OnGetSourceComplete;
+
 
 private:
     // UI Elements
@@ -36,6 +44,9 @@ private:
     // Data
     TArray<TSharedPtr<FString>> PriorityOptions;
 
+    TSharedPtr<SWebBrowser> WebBrowser;
+
+
     // Event handlers
     FReply OnPurchaseClicked();
     FReply OnCloseClicked();
@@ -52,6 +63,6 @@ private:
 
     bool isPinedMasked() const;
     void OnBrowserUrlChanged(const FText& NewUrl);
-
+    
 
 };
