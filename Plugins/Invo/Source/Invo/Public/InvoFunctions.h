@@ -15,6 +15,7 @@ class SWindow;
 class FJsonObject;
 class SInvoTicketWidget;
 class SInvoTransferWidget;
+class SInvoPurchaseWidget;
 
 // For CallBack Functions 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnInvoAPICallCompleted, bool, bSuccess);
@@ -437,6 +438,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Invo")
 	static void InvoShowTransferWidget();
 
+	// Displays the SInvoPurchaseWidget
+	UFUNCTION(BlueprintCallable, Category = "Invo")
+	static void InvoShowPurchaseWidget();
+
 
 	// Used to call for any UI Class
 	static void MakeHttpRequest(const FString& Url, const FString& HttpMethod, const FString& Content, TFunction<void(const bool, const FString&)> Callback);
@@ -494,6 +499,9 @@ private:
 	static TSharedPtr<SInvoTicketWidget> InvoTicketWidget;
 
 	static TSharedPtr<SInvoTransferWidget> InvoTransferWidget;
+
+	static TSharedPtr<SInvoPurchaseWidget> InvoPurchaseWidget;
+
 
 	
 	//static TSharedRef<FJsonObject> JsonObjectTest;

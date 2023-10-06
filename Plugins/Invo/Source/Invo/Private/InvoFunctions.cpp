@@ -11,11 +11,13 @@
 #include "Misc/AES.h"
 #include "Misc/Base64.h"
 
-
 #include "InvoHttpManager.h"
+
+// UI Widgets 
 #include "SInvoGDPRWidget.h"
 #include "SInvoTicketWidget.h"
 #include "SInvoTransferWidget.h"
+#include "SInvoPurchaseWidget.h"
 
 #include "Misc/OutputDeviceRedirector.h"
 #include "Runtime/Core/Public/Misc/Paths.h" // web brouser
@@ -1420,6 +1422,19 @@ void UInvoFunctions::InvoShowTransferWidget()
 		.SupportsMaximize(true);
 
 	Window->SetContent(SNew(SInvoTransferWidget));
+	FSlateApplication::Get().AddWindow(Window);
+}
+
+void UInvoFunctions::InvoShowPurchaseWidget()
+{
+	// Create a InvoTransfer Widget instance
+	Window = SNew(SWindow)
+		.Title(NSLOCTEXT("InvoPurchase", "WindowTitle", "Invo Purchase System"))
+		.ClientSize(FVector2D(800, 600))
+		.SupportsMinimize(true)
+		.SupportsMaximize(true);
+
+	Window->SetContent(SNew(SInvoPurchaseWidget));
 	FSlateApplication::Get().AddWindow(Window);
 }
 
