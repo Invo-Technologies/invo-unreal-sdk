@@ -220,10 +220,11 @@ void UInvoFunctions::GetInvoFacts()
 	const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
 
 	FString SecretsIniFilePath = FPaths::ProjectConfigDir() + TEXT("Secrets.ini");
-	FPaths::NormalizeFilename(SecretsIniFilePath);
+	FString SecretsNormalizeConfigIniPath = FConfigCacheIni::NormalizeConfigIniPath(SecretsIniFilePath);
 
+	FPaths::NormalizeFilename(SecretsNormalizeConfigIniPath);
 	FString SecretKey;
-	if (GConfig->GetString(TEXT("/Script/Invo.UInvoFunctions"), TEXT("SECRETKEY"), SecretKey, SecretsIniFilePath))
+	if (GConfig->GetString(TEXT("/Script/Invo.UInvoFunctions"), TEXT("SECRETKEY"), SecretKey, SecretsNormalizeConfigIniPath))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Secret Key: %s"), *SecretKey);
 	}
@@ -315,7 +316,7 @@ void UInvoFunctions::GetInvoFacts()
 
 		});
 
-	Request->ProcessRequest();
+//	Request->ProcessRequest();
 
 }
 
