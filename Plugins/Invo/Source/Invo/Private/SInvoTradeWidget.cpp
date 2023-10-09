@@ -1,5 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
-#include "SInvoTransferWidget.h"
+
+
+#include "SInvoTradeWidget.h"
 #include "InvoFunctions.h"
 #include "InvoHttpManager.h"
 #include "Widgets/Layout/SBorder.h"
@@ -16,14 +18,9 @@
 #include "Runtime/Core/Public/Misc/MessageDialog.h"
 #include "Runtime/SlateCore/Public/Widgets/SWidget.h"
 
-void SInvoTransferWidget::Construct(const FArguments& InArgs)
+void SInvoTradeWidget::Construct(const FArguments& InArgs)
 {
     // Populate PriorityOptions
-    PriorityOptions.Add(MakeShared<FString>("Low"));
-    PriorityOptions.Add(MakeShared<FString>("Medium"));
-    PriorityOptions.Add(MakeShared<FString>("High"));
-    PriorityOptions.Add(MakeShared<FString>("Urgent"));
-
     ChildSlot
         [
             // Set the background color to match UE's UI
@@ -32,69 +29,6 @@ void SInvoTransferWidget::Construct(const FArguments& InArgs)
                 .Padding(10.0f)
                 [
                     SNew(SVerticalBox)
-          
-                        + SVerticalBox::Slot()
-                        .FillHeight(1.0f)
-                        .HAlign(HAlign_Left)
-                        .Padding(10.0f)
-                        [
-                            SNew(SHorizontalBox)
-                                // Group for "Game ID"
-                                + SHorizontalBox::Slot()
-                                .FillWidth(0.25f)  // This ensures each group takes up 25% of the available width
-                                
-                                .Padding(5.0f)
-                                [
-                                    SNew(SVerticalBox)
-                                        + SVerticalBox::Slot()
-                                        .AutoHeight()
-                                        [
-                                            SNew(STextBlock)
-                                                .Text(FText::FromString("Target Game ID:"))
-                                        ]
-                                        + SVerticalBox::Slot()
-                                        .AutoHeight()
-                                        [
-                                            SAssignNew(GameIDTextBox, SEditableTextBox)
-                                                .HintText(FText::FromString("Enter Game ID"))
-                                                .MinDesiredWidth(200.0f) // This sets the minimum width
-
-                                        ]
-                                ]
-                        ]
-
-                        
-                       //+ SVerticalBox::Slot()
-                       //.FillHeight(1.0f)
-                       //.HAlign(HAlign_Left)
-                       //.Padding(10.0f)
-                       //[
-                       //     //Sew(SHorizontalBox)
-                       //     //  // Group for "Game ID"
-                       //     //  + SHorizontalBox::Slot()
-                       //     //  .FillWidth(0.25f)  // This ensures each group takes up 25% of the available width
-                       //     //  .Padding(5.0f)
-                       //     //  [
-                       //     //      SNew(SVerticalBox)
-                       //     //          + SVerticalBox::Slot()
-                       //     //          .AutoHeight()
-                       //     //          [
-                       //     //              SNew(STextBlock)
-                       //     //                  .Text(FText::FromString("From Player ID (Optional):"))
-                       //     //          ]
-                       //     //          + SVerticalBox::Slot()
-                       //     //          .AutoHeight()
-                       //     //          [
-                       //     //              SAssignNew(FromPlayerIDTextBox, SEditableTextBox)
-                       //     //                  .HintText(FText::FromString("Enter Player ID "))
-                       //     //                  .MinDesiredWidth(200.0f) // This sets the minimum width
-                       //     //
-                       //     //
-                       //     //          ]
-                       //     //  ]
-                       //]   //
-
-
 
                         +SVerticalBox::Slot()
                         .FillHeight(1.0f)
@@ -182,7 +116,7 @@ void SInvoTransferWidget::Construct(const FArguments& InArgs)
                                                 .HintText(FText::FromString("Enter Currency Name"))
                                                 .MinDesiredWidth(200.0f) // This sets the minimum width
 
-                                                
+
                                         ]
                                 ]
                         ]
@@ -219,14 +153,14 @@ void SInvoTransferWidget::Construct(const FArguments& InArgs)
                                         .Padding(5.0f)
                                         [
                                             SNew(SButton)
-                                                .Text(this, &SInvoTransferWidget::GetPinMaskButtonText)
-                                                .OnClicked(this, &SInvoTransferWidget::OnTogglePinMask)
+                                                .Text(this, &SInvoTradeWidget::GetPinMaskButtonText)
+                                                .OnClicked(this, &SInvoTradeWidget::OnTogglePinMask)
 
                                         ]
 
                                 ]
                         ]
-                     
+
 
                         // Submit and Close Buttons at the bottom
                         +SVerticalBox::Slot()
@@ -243,8 +177,8 @@ void SInvoTransferWidget::Construct(const FArguments& InArgs)
                                 .Padding(5.0f)
                                 [
                                     SNew(SButton)
-                                        .Text(FText::FromString("Transfer"))
-                                        .OnClicked(this, &SInvoTransferWidget::OnTransferClicked)
+                                        .Text(FText::FromString("Request Trade"))
+                                        .OnClicked(this, &SInvoTradeWidget::OnTradeClicked)
                                 ]
 
                                 // Close Button
@@ -254,7 +188,7 @@ void SInvoTransferWidget::Construct(const FArguments& InArgs)
                                 [
                                     SNew(SButton)
                                         .Text(FText::FromString("Close"))
-                                        .OnClicked(this, &SInvoTransferWidget::OnCloseClicked)
+                                        .OnClicked(this, &SInvoTradeWidget::OnCloseClicked)
                                 ]
                         ]
                 ]
@@ -262,32 +196,34 @@ void SInvoTransferWidget::Construct(const FArguments& InArgs)
 }
 
 // This function will be called when the HTTP request completes.
-void SInvoTransferWidget::HandleHttpRequestCompleted(bool bWasSuccessful, const FString& ResponseContent)
+void SInvoTradeWidget::HandleHttpRequestCompleted(bool bWasSuccessful, const FString& ResponseContent)
 {
     // Handle the response here.
     // For instance, display a message to the user based on bWasSuccessful.
 }
 
 // When setting up the widget (probably in its constructor or initialization function)
-void SInvoTransferWidget::SetupWidget()
+void SInvoTradeWidget::SetupWidget()
 {
     // ... other setup code ...
 
     // Bind the callback to the delegate.
-    UInvoHttpManager::GetInstance()->OnHttpRequestCompleted.AddDynamic(this, &SInvoTransferWidget::HandleHttpRequestCompleted);
+    UInvoHttpManager::GetInstance()->OnHttpRequestCompleted.AddDynamic(this, &SInvoTradeWidget::HandleHttpRequestCompleted);
 }
 
 
-FReply SInvoTransferWidget::OnTransferClicked()
+FReply SInvoTradeWidget::OnTradeClicked()
 {
+    
     // Settings from Invo SDK Feilds
     const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
+    
     /*
     // 1. Get the text from each of the UI fields.
     FString GameID = GameIDTextBox->GetText().ToString();
     FString TargetPlayerID = TargetPlayerIDTextBox->GetText().ToString();
     FString Priority;
- 
+
 
     // 2. Create a JSON payload with this data.
     TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
@@ -325,7 +261,7 @@ FReply SInvoTransferWidget::OnTransferClicked()
 
 
     // Alert for empty fields
-    if (GameID.IsEmpty() ||TargetPlayerID.IsEmpty())
+    if (GameID.IsEmpty() || TargetPlayerID.IsEmpty())
     {
         // Show a Windows alert box
         FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Game ID and Target Player ID cannot be empty.")));
@@ -383,7 +319,7 @@ FReply SInvoTransferWidget::OnTransferClicked()
 }
 
 
-FReply SInvoTransferWidget::OnCloseClicked()
+FReply SInvoTradeWidget::OnCloseClicked()
 {
     // Handle closing logic here
 
@@ -393,22 +329,22 @@ FReply SInvoTransferWidget::OnCloseClicked()
 }
 
 // Additional functions for the ComboBox
-TSharedRef<SWidget> SInvoTransferWidget::GeneratePriorityComboBoxWidget(TSharedPtr<FString> InItem)
+TSharedRef<SWidget> SInvoTradeWidget::GeneratePriorityComboBoxWidget(TSharedPtr<FString> InItem)
 {
     return SNew(STextBlock).Text(FText::FromString(*InItem));
 }
 
-void SInvoTransferWidget::OnPriorityChanged(TSharedPtr<FString> NewSelection, ESelectInfo::Type SelectInfo)
+void SInvoTradeWidget::OnPriorityChanged(TSharedPtr<FString> NewSelection, ESelectInfo::Type SelectInfo)
 {
     // Handle priority change
 }
 
-FText SInvoTransferWidget::GetPriorityComboBoxText() const
+FText SInvoTradeWidget::GetPriorityComboBoxText() const
 {
     return FText::FromString(*PriorityComboBox->GetSelectedItem());
 }
 
-void SInvoTransferWidget::CloseTicketWidget() const
+void SInvoTradeWidget::CloseTicketWidget() const
 {
     // Find and close the parent window of this widget
     TSharedPtr<SWindow> ParentWindow = FSlateApplication::Get().FindWidgetWindow(SharedThis(this));
@@ -418,7 +354,7 @@ void SInvoTransferWidget::CloseTicketWidget() const
     }
 }
 
-bool SInvoTransferWidget::ValidateResponseContent(const FString& ResponseContent)
+bool SInvoTradeWidget::ValidateResponseContent(const FString& ResponseContent)
 {
     TSharedPtr<FJsonObject> JsonObject;
     TSharedRef<TJsonReader<TCHAR>> JsonReader = TJsonReaderFactory<TCHAR>::Create(ResponseContent);
@@ -452,18 +388,18 @@ bool SInvoTransferWidget::ValidateResponseContent(const FString& ResponseContent
 }
 
 
-bool SInvoTransferWidget::isPinedMasked() const
+bool SInvoTradeWidget::isPinedMasked() const
 {
     return bIsPinMasked;
 }
 
-FText SInvoTransferWidget::GetPinMaskButtonText() const
+FText SInvoTradeWidget::GetPinMaskButtonText() const
 {
     return bIsPinMasked ? FText::FromString("Unmask") : FText::FromString("Mask");
 }
 
 
-FReply SInvoTransferWidget::OnTogglePinMask()
+FReply SInvoTradeWidget::OnTogglePinMask()
 {
     bIsPinMasked = !bIsPinMasked;
     if (PinTextBox.IsValid())

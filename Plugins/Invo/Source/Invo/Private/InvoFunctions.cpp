@@ -20,6 +20,7 @@
 #include "SInvoTicketWidget.h"
 #include "SInvoTransferWidget.h"
 #include "SInvoPurchaseWidget.h"
+#include "SInvoTradeWidget.h"
 
 #include "Misc/OutputDeviceRedirector.h"
 #include "Runtime/Core/Public/Misc/Paths.h" // web brouser
@@ -1457,6 +1458,19 @@ void UInvoFunctions::InvoShowPurchaseWidget()
 		.SupportsMaximize(true);
 
 	Window->SetContent(SNew(SInvoPurchaseWidget));
+	FSlateApplication::Get().AddWindow(Window);
+}
+
+void UInvoFunctions::InvoShowTradeWidget()
+{
+	// Create a InvoTransfer Widget instance
+	Window = SNew(SWindow)
+		.Title(NSLOCTEXT("InvoTrade", "WindowTitle", "Invo Trade System"))
+		.ClientSize(FVector2D(500, 500))
+		.SupportsMinimize(true)
+		.SupportsMaximize(true);
+
+	Window->SetContent(SNew(SInvoTradeWidget));
 	FSlateApplication::Get().AddWindow(Window);
 }
 
