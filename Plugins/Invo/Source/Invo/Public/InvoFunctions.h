@@ -14,6 +14,10 @@ class SWebBrowser;
 class SWindow;
 class FJsonObject;
 class SInvoTicketWidget;
+class SInvoTransferWidget;
+class SInvoPurchaseWidget;
+class SInvoTradeWidget;
+
 // For CallBack Functions 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnInvoAPICallCompleted, bool, bSuccess);
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnCurrencyAmountFetchedBP, const FString&, CurrencyAmount);
@@ -379,6 +383,9 @@ public:
 	static void OpenInvoWebPage(UObject* WorldContextObject, FString Url);
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
+	static void OpenInvoInitWebPage(UObject* WorldContextObject, FString Url);
+
+	UFUNCTION(BlueprintCallable, Category = "Invo")
 	static void CloseInvoWebBrowser();
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
@@ -424,6 +431,23 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Invo")
 	static void InvoShowTicketWidget();
 
+	// Displays the SInvoTicketWidget
+	UFUNCTION(BlueprintCallable, Category = "Invo")
+	static void InvoShowGDPRWidget();
+
+	// Displays the SInvoTicketWidget
+	UFUNCTION(BlueprintCallable, Category = "Invo")
+	static void InvoShowTransferWidget();
+
+	// Displays the SInvoPurchaseWidget
+	UFUNCTION(BlueprintCallable, Category = "Invo")
+	static void InvoShowPurchaseWidget();
+
+	// Displays the SInvoPurchaseWidget
+	UFUNCTION(BlueprintCallable, Category = "Invo")
+	static void InvoShowTradeWidget();
+
+
 	// Used to call for any UI Class
 	static void MakeHttpRequest(const FString& Url, const FString& HttpMethod, const FString& Content, TFunction<void(const bool, const FString&)> Callback);
 
@@ -456,6 +480,8 @@ private:
 
 	static void InvoAPIJsonReturnCall(const FString& City, FString& JsonData, TFunction<void(TSharedPtr<FJsonObject>)> Callback);
 
+	static void InvoAPIJsonReturn(const FString& EndPoint, FString& JsonData, TFunction<void(TSharedPtr<FJsonObject>)> Callback);
+
 	static void SimulateAPICall(FOnInvoAPICallCompleted OnCompleted);
 
 	UFUNCTION()
@@ -477,6 +503,17 @@ private:
 
 	static TSharedPtr<SInvoTicketWidget> InvoTicketWidget;
 
+	static TSharedPtr<SInvoTransferWidget> InvoTransferWidget;
+
+	static TSharedPtr<SInvoPurchaseWidget> InvoPurchaseWidget;
+
+	static TSharedPtr<SInvoTradeWidget> InvoTradeWidget;
+
+	// Helper Method for Extracting Code from HTML
+	static FString ExtractCodeFromHTMLSource(const FString& HtmlSource);
+
+	// Helper Method for Extracting Code from a URL
+	static FString ExtractCodeFromUrl(const FString& Url);
 	
 	//static TSharedRef<FJsonObject> JsonObjectTest;
 

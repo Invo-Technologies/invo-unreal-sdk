@@ -32,7 +32,9 @@ public class Invo : ModuleRules
                 "HTTP",
                 "UMG",
                 "WebBrowser",
-                "WebBrowserWidget"
+                "WebBrowserWidget",
+                "Slate",
+                "SlateCore",
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);

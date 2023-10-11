@@ -38,13 +38,14 @@ public:
     UPROPERTY(BlueprintAssignable, Category = "Invo")
     FHttpResponseReceived OnHttpResponseReceived;
 
-
-
+    void SetAuthCode(FString AuthCodeString);
 
 private:
     static UInvoHttpManager* Instance;
 
     void HttpRequestCompleted(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
+
+    FString AuthCode;
 
     //FHttpResponseReceived ResponseContentDelegate;
 };
