@@ -17,7 +17,6 @@ class SInvoTicketWidget;
 class SInvoTransferWidget;
 class SInvoPurchaseWidget;
 class SInvoTradeWidget;
-
 // For CallBack Functions 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnInvoAPICallCompleted, bool, bSuccess);
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnCurrencyAmountFetchedBP, const FString&, CurrencyAmount);
@@ -478,7 +477,7 @@ public:
 
 	static bool IsExpired(const FString& Value, const FString& Value2);
 
-	static bool InitializeAESKey(const FString& HexKeyString, FAES::FAESKey& Key);
+	static bool InitializeAESKey(const FString& HexKeyString);
 
 	static void TestEncryptDecrypt(const FString& PlainText, const FString& KeyString, FString& EncryptedHexStringOut);
 

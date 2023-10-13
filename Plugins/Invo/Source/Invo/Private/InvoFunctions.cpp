@@ -1587,7 +1587,7 @@ FString UInvoFunctions::EncryptData(const FString& DataToEncrypt, const FString&
 	FString EncryptedString;
 
 
-	if (InitializeAESKey(KeyString, InvoPrivate::Key))
+	if (InitializeAESKey(KeyString))
 	{
 		// You can now use the Key for encryption and decryption
 		//FAES::EncryptData(DataBytes.GetData(), DataBytes.Num(), Key);
@@ -1616,7 +1616,7 @@ FString UInvoFunctions::DecryptData(const FString& DataToDecrypt, const FString&
 	FString HexKeyString = TEXT("1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF"); // 64 hex characters
 
 
-	if (InitializeAESKey(HexKeyString, InvoPrivate::Key))
+	if (InitializeAESKey(HexKeyString))
 	{
 		// You can now use the Key for encryption and decryption
 		
@@ -1902,7 +1902,7 @@ bool UInvoFunctions::IsExpired(const FString& Value, const FString& Value2)
 	return Value == Value2; // Placeholder, replace with your actual code
 }
 
-bool UInvoFunctions::InitializeAESKey(const FString& HexKeyString, FAES::FAESKey& Key)
+bool UInvoFunctions::InitializeAESKey(const FString& HexKeyString)
 {
 	if (HexKeyString.Len() != FAES::FAESKey::KeySize * 2) // Each byte is represented by 2 hex characters
 	{
@@ -1921,7 +1921,7 @@ bool UInvoFunctions::InitializeAESKey(const FString& HexKeyString, FAES::FAESKey
 			int32 HighNibble = Char1 <= TEXT('9') ? Char1 - TEXT('0') : Char1 - TEXT('A') + 10;
 			int32 LowNibble = Char2 <= TEXT('9') ? Char2 - TEXT('0') : Char2 - TEXT('A') + 10;
 
-			Key.Key[Index / 2] = (HighNibble << 4) + LowNibble;
+			InvoPrivate::Key.Key[Index / 2] = (HighNibble << 4) + LowNibble;
 		}
 		else
 		{
@@ -1941,7 +1941,7 @@ void UInvoFunctions:: TestEncryptDecrypt(const FString& PlainText, const FString
 	// Ensure Key.Key is filled with bytes from KeyString (you might want to convert hex to bytes if necessary)
 
 
-	if (!InitializeAESKey(KeyString, InvoPrivate::Key))
+	if (!InitializeAESKey(KeyString))
 		return;
 
 	// 2. Define a string to encrypt
