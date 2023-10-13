@@ -27,7 +27,7 @@ public:
     typedef TFunction<void(bool, const FString&)> HttpRequestCallback;
 
 
-    void MakeHttpRequest(const FString& URL, const FString& HttpMethod, const TMap<FString, FString>& Headers, const FString& Payload, HttpRequestCallback Callback);
+    void MakeHttpRequest(const FString& URL, const FString& HttpMethod, const TMap<FString, FString>& Headers, const TMap<FString, FString>& FormData, HttpRequestCallback Callback);
 
     // This delegate is what we will bind to in the widget.
     UPROPERTY(BlueprintAssignable, Category = "Invo")
@@ -40,6 +40,9 @@ public:
 
     void SetAuthCode(FString AuthCodeString);
 
+    FString GetAuthCode() const;
+
+
 private:
     static UInvoHttpManager* Instance;
 
@@ -47,6 +50,8 @@ private:
 
     FString AuthCode;
 
+    void YourAESFunction();
+  
     //FHttpResponseReceived ResponseContentDelegate;
 };
 

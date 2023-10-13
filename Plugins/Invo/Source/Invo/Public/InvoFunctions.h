@@ -325,7 +325,7 @@ public:
 	* @return [bool] True if valid UNetConnection was found from PlayerController. False otherwise.
 	**/
 	UPROPERTY(config, EditAnywhere, Category = Settings)
-	uint32 Game_ID;
+	FString Game_ID;
 
 
 	/**
@@ -455,6 +455,45 @@ public:
 	static void MakeHttpRequestBP(const FString& Url, const FString& HttpMethod, const FString& Content, FOnHttpResponseReceived OnResponseReceived);
 
 
+	static FString EncryptData(const FString& DataToEncrypt, const FString& KeyString);
+	static FString DecryptData(const FString& DataToDecrypt, const FString& KeyString);
+
+
+	static TArray<uint8> StringToBytes(const FString& String);
+	static FString BytesToString(const TArray<uint8>& Bytes);
+
+
+	static FString PadStringToAESBlockSize(const FString& Data);
+	static FString UnpadStringFromAESBlockSize(const FString& Data);
+
+	static void StringToBytes(const FString& InString, TArray<uint8>& OutBytes);
+	static void BytesToString(const TArray<uint8>& InBytes, FString& OutString);
+	static bool HexToBytes(const FString& HexString, TArray<uint8>& OutBytes);
+
+	static TArray<uint8> PadData(const TArray<uint8>& Data);
+
+	static TArray<uint8> UnpadData(const TArray<uint8>& Data);
+	
+	static void UpdateSecretsIni(FString KeyVarable, FString KeyCodeValue);
+
+	static bool IsExpired(const FString& Value, const FString& Value2);
+
+	static bool InitializeAESKey(const FString& HexKeyString, FAES::FAESKey& Key);
+
+	static void TestEncryptDecrypt(const FString& PlainText, const FString& KeyString, FString& EncryptedHexStringOut);
+
+	static FString BytesToHex(const TArray<uint8>& Bytes);
+
+	//static TArray<uint8> AuthCodePlainTextBytes;
+
+
+	bool IsHexDigit(TCHAR Character)
+	{
+		return (Character >= TEXT('0') && Character <= TEXT('9')) ||
+			(Character >= TEXT('a') && Character <= TEXT('f')) ||
+			(Character >= TEXT('A') && Character <= TEXT('F'));
+	}
+
 
 	/**
 	* Converts a JSON string to a Map (Key-Value pairs)
@@ -515,6 +554,7 @@ private:
 	// Helper Method for Extracting Code from a URL
 	static FString ExtractCodeFromUrl(const FString& Url);
 	
+
 	//static TSharedRef<FJsonObject> JsonObjectTest;
 
 protected:

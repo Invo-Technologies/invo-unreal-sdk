@@ -14,6 +14,8 @@
 #include "InvoHttpManager.h"
 #include <regex>
 
+#include "ThirdParty/SQLite/include/sqlite3.h"
+
 
 // UI Widgets 
 #include "SInvoGDPRWidget.h"
@@ -88,6 +90,13 @@
 //#include "Plugins/Runtime/Database/DatabaseSupport/Source/DatabaseSupport/Public/Database.h"
 
 //#include "Plugins/Runtime/Database/DatabaseSupport/Source/DatabaseSupport/Public/DatabaseSupport.h"
+
+
+namespace InvoPrivate
+{
+	static TArray<uint8> AuthCodePlainTextBytes;
+	static FAES::FAESKey Key;
+}
 
 
 // Initialize the static shared references
@@ -199,7 +208,7 @@ FInvoAssetData UInvoFunctions::GetInvoUserSettingsInput()
 	}
 
 	const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
-	UE_LOG(LogTemp, Warning, TEXT("Testing Game_ID fisrt %i"), Settings->Game_ID)
+	UE_LOG(LogTemp, Warning, TEXT("Testing Game_ID fisrt %s"), *Settings->Game_ID)
 
 
 		if (Settings)
@@ -349,7 +358,17 @@ void UInvoFunctions::OpenWebView(const FString& Url)
 
 				FString AuthCode = ExtractCodeFromUrl(NewUrl);
 				UInvoHttpManager::GetInstance()->SetAuthCode(AuthCode);
+
+				//FString KeyString = TEXT("0123456789abcdef0123456789abcdef");
+				FString HexKeyString = TEXT("1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF"); // 64 hex characters
+
+				FString EncryptDataAuthCode = EncryptData(AuthCode, HexKeyString);
+				UpdateSecretsIni("AuthCodeKey", EncryptDataAuthCode);
+			
+
 				UE_LOG(LogTemp, Warning, TEXT("AuthCode is %s"), *AuthCode);
+				//UE_LOG(LogTemp, Warning, TEXT("DecryptedAuthCode is %s"), *DecryptedAuthCodeByteToString);
+
 				HandleURLChange(NewUrl);
 				
 				
@@ -935,7 +954,7 @@ void UInvoFunctions::InvoAPIJsonReturnCall(const FString& City, FString& JsonDat
 
 	FString Asset_ID = Settings->AssetData.Asset_ID.Replace(TEXT(" "), TEXT("%20"));
 
-	FString Url = FString::Printf(TEXT("https://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s"), *City.Replace(TEXT(" "), TEXT("%20")), Settings->Game_ID);
+	FString Url = FString::Printf(TEXT("https://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s"), *City.Replace(TEXT(" "), TEXT("%20")), *Settings->Game_ID);
 
 	MakeHttpRequest(Url, TEXT("GET"), JsonData, [Callback](TSharedPtr<FJsonObject> JsonObject)
 		{
@@ -1548,4 +1567,442 @@ FString UInvoFunctions::ExtractCodeFromUrl(const FString& Url)
 	}
 	return CodeValue;
 
+}
+
+
+
+
+FString UInvoFunctions::EncryptData(const FString& DataToEncrypt, const FString& KeyString)
+{
+	FAES::FAESKey Key;
+	//TArray<uint8> KeyBytes;
+	//HexToBytes(KeyString, KeyBytes);
+	//FMemory::Memcpy(Key.Key, KeyBytes.GetData(), KeyBytes.Num());
+
+	//FString PaddedData = PadStringToAESBlockSize(DataToEncrypt);
+
+	TArray<uint8> DataBytes;
+	//StringToBytes(PaddedData, DataBytes);
+
+	FString EncryptedString;
+
+
+	if (InitializeAESKey(KeyString, InvoPrivate::Key))
+	{
+		// You can now use the Key for encryption and decryption
+		//FAES::EncryptData(DataBytes.GetData(), DataBytes.Num(), Key);
+
+		BytesToString(DataBytes, EncryptedString);
+		UE_LOG(LogTemp, Warning, TEXT("check dtatabytes num %i."), DataBytes.Num());
+		UE_LOG(LogTemp, Warning, TEXT("check encrpytiong num %s."), *EncryptedString);
+
+		TestEncryptDecrypt(DataToEncrypt, KeyString, EncryptedString);
+
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Failed to initialize AES key."));
+	}
+
+
+
+	return EncryptedString;
+}
+
+FString UInvoFunctions::DecryptData(const FString& DataToDecrypt, const FString& KeyString)
+{
+
+	FString DecryptedString;
+	FString HexKeyString = TEXT("1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF"); // 64 hex characters
+
+
+	if (InitializeAESKey(HexKeyString, InvoPrivate::Key))
+	{
+		// You can now use the Key for encryption and decryption
+		
+		//FAES::DecryptData(InvoPrivate::AuthCodePlainTextBytes.GetData(), InvoPrivate::AuthCodePlainTextBytes.Num(), InvoPrivate::Key);
+
+		//BytesToString(InvoPrivate::AuthCodePlainTextBytes, DecryptedString);
+
+		FString SecretsIniFilePath = FPaths::ProjectConfigDir() + TEXT("Secrets.ini");
+		FString SecretsNormalizeConfigIniPath = FConfigCacheIni::NormalizeConfigIniPath(SecretsIniFilePath);
+
+		FPaths::NormalizeFilename(SecretsNormalizeConfigIniPath);
+		FString AuthCodeKey;
+		TArray<uint8> OutAuthCodeBytes;
+		if (GConfig->GetString(TEXT("/Script/Invo.UInvoFunctions"), TEXT("AUTHCODEKEY"), AuthCodeKey, SecretsNormalizeConfigIniPath))
+		{
+
+			UE_LOG(LogTemp, Warning, TEXT("Encryped AuthCode Hex Key: %s"), *AuthCodeKey);
+			if (!AuthCodeKey.IsEmpty())
+			{
+
+				HexToBytes(AuthCodeKey, OutAuthCodeBytes);
+				FAES::DecryptData(OutAuthCodeBytes.GetData(), OutAuthCodeBytes.Num(), InvoPrivate::Key);
+
+				for (uint8 b : OutAuthCodeBytes)
+				{
+					if (b != 0) // Skip padding
+					{
+						DecryptedString += static_cast<TCHAR>(b);
+					}
+				}
+				FString UnpaddedData = UnpadStringFromAESBlockSize(DecryptedString); // Removing the padding
+				UE_LOG(LogTemp, Warning, TEXT("Jesus Decrypte AuthCode Key padding removed: %s"), *UnpaddedData);
+				UE_LOG(LogTemp, Warning, TEXT("Jesus Decrypte AuthCode Key: %s"), *DecryptedString);
+				
+
+
+
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("AuthCode Key is empty: %s"), *AuthCodeKey);
+				return TEXT("AuthCode Key is empty: %s");
+
+			}
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("Failed to get authcode key from config file"));
+			return TEXT("Failed to get authcode key from config file");
+		}
+
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Failed to initialize AES key."));
+		return TEXT("Failed to initialize AES key.");
+	}
+
+
+	return DecryptedString;
+}
+
+
+/*
+FString UInvoFunctions::EncryptData(const FString& DataToEncrypt, const FString& KeyString)
+{
+	InitializeAESKey(KeyString, InvoPrivate::Key);
+
+	TArray<uint8> DataBytes;
+	StringToBytes(DataToEncrypt, DataBytes);
+
+	// Ensure the data is a multiple of 16 bytes (128 bits)
+	while (DataBytes.Num() % 16 != 0)
+	{
+		DataBytes.Add(0);
+	}
+
+	FAES::EncryptData(DataBytes.GetData(), DataBytes.Num(), InvoPrivate::Key);
+	FString EncryptedHexString = BytesToHex(DataBytes);
+
+	return EncryptedHexString;
+}
+
+
+FString UInvoFunctions::DecryptData(const FString& DataToDecrypt, const FString& KeyString)
+{
+
+	TArray<uint8> DataBytes;
+	HexToBytes(DataToDecrypt, DataBytes);
+	FAES::DecryptData(DataBytes.GetData(), DataBytes.Num(), InvoPrivate::Key);
+
+	// Convert back to string
+	FString DecryptedText;
+	BytesToString(DataBytes, DecryptedText);
+	DecryptedText;
+
+	return DecryptedText;
+}
+*/
+TArray<uint8> UInvoFunctions::StringToBytes(const FString& String)
+{
+	TArray<uint8> Bytes;
+	Bytes.Append((uint8*)TCHAR_TO_UTF8(*String), String.Len() * sizeof(ANSICHAR));
+	return Bytes;
+}
+
+FString UInvoFunctions::BytesToString(const TArray<uint8>& Bytes)
+{
+	return FString(UTF8_TO_TCHAR(Bytes.GetData()));
+}
+
+
+
+FString UInvoFunctions::PadStringToAESBlockSize(const FString& Data)
+{
+	FString PaddedData = Data;
+	int32 NumBytesMissing = 16 - (Data.Len() % 16);
+	for (int32 i = 0; i < NumBytesMissing; ++i)
+	{
+		PaddedData.AppendChar(' '); // Append spaces or any other padding character
+	}
+	return PaddedData;
+}
+
+FString UInvoFunctions:: UnpadStringFromAESBlockSize(const FString& Data)
+{
+	FString UnpaddedData = Data;
+	UnpaddedData.TrimEndInline(); // Remove trailing spaces or the padding character used
+	return UnpaddedData;
+}
+
+void UInvoFunctions::StringToBytes(const FString& InString, TArray<uint8>& OutBytes)
+{
+	// Converting FString to UTF-8
+	FTCHARToUTF8 Convert(*InString);
+
+	// Resizing the output array to fit the UTF-8 string
+	OutBytes.SetNumUninitialized(Convert.Length());
+
+	// Copying the UTF-8 bytes to the output array
+	FMemory::Memcpy(OutBytes.GetData(), Convert.Get(), Convert.Length());
+}
+
+void UInvoFunctions::BytesToString(const TArray<uint8>& InBytes, FString& OutString)
+{
+	// Ensuring the byte array is null-terminated
+	if (InBytes.Num() == 0 || InBytes.Last() != 0)
+	{
+		TArray<uint8> NullTerminatedBytes = InBytes;
+		NullTerminatedBytes.Add(0);
+		OutString = UTF8_TO_TCHAR(NullTerminatedBytes.GetData());
+	}
+	else
+	{
+		OutString = UTF8_TO_TCHAR(InBytes.GetData());
+	}
+}
+
+
+bool UInvoFunctions::HexToBytes(const FString& HexString, TArray<uint8>& OutBytes)
+{
+	if (HexString.Len() % 2 != 0)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Invalid hex string size."));
+		return false;
+	}
+
+	for (int32 Index = 0; Index < HexString.Len(); Index += 2)
+	{
+		FString ByteSubstring = HexString.Mid(Index, 2);
+		uint8 Byte = FCString::Strtoi(*ByteSubstring, nullptr, 16);
+		OutBytes.Add(Byte);
+	}
+
+	return true;
+}
+
+
+/*
+bool UInvoFunctions::HexToBytes(const FString& HexString, TArray<uint8>& OutBytes)
+{
+	if (HexString.Len() % 2 != 0)
+	{
+		// Invalid hex string length
+		return false;
+	}
+
+	for (int32 Index = 0; Index < HexString.Len(); Index += 2)
+	{
+		FString ByteString = HexString.Mid(Index, 2);
+		uint8 Byte;
+		if (ByteString.Len() == 2 && FChar::IsHexDigit(ByteString[0]) && FChar::IsHexDigit(ByteString[1]))
+		{
+			Byte = FCString::Atoi(*ByteString);
+		}
+		else
+		{
+			// Invalid hex digit
+			return false;
+		}
+
+		OutBytes.Add(Byte);
+	}
+
+	return true;
+}
+
+*/
+
+TArray<uint8> UInvoFunctions:: PadData(const TArray<uint8>& Data)
+{
+	TArray<uint8> PaddedData = Data;
+	int PaddingSize = 16 - (Data.Num() % 16);
+	for (int i = 0; i < PaddingSize; ++i)
+	{
+		PaddedData.Add(PaddingSize);
+	}
+	return PaddedData;
+}
+
+TArray<uint8> UInvoFunctions:: UnpadData(const TArray<uint8>& Data)
+{
+	TArray<uint8> UnpaddedData = Data;
+	int LastByte = Data.Last();
+	for (int i = 0; i < LastByte; ++i)
+	{
+		UnpaddedData.Pop();
+	}
+	return UnpaddedData;
+}
+
+void UInvoFunctions::UpdateSecretsIni(FString KeyVariable, FString KeyCodeValue)
+{
+	// Specify the path to the Secrets.ini file
+	FString SecretsIniFilePath = FPaths::ProjectConfigDir() + TEXT("Secrets.ini");
+	FString SecretsNormalizeConfigIniPath = FConfigCacheIni::NormalizeConfigIniPath(SecretsIniFilePath);
+	FPaths::NormalizeFilename(SecretsNormalizeConfigIniPath);
+
+	// Get the existing value
+	FString ExistingValue;
+	if (GConfig->GetString(TEXT("/Script/Invo.UInvoFunctions"), *KeyVariable, ExistingValue, SecretsNormalizeConfigIniPath))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Existing Value: %s"), *ExistingValue);
+
+		// Check whether the KeyCodeValue is expired (you might need to define IsExpired function)
+		if (ExistingValue != KeyCodeValue)
+		{
+			// If expired, update the value
+			GConfig->SetString(
+				TEXT("/Script/Invo.UInvoFunctions"),
+				*KeyVariable,
+				*KeyCodeValue,
+				SecretsNormalizeConfigIniPath
+			);
+			GConfig->Flush(false, SecretsNormalizeConfigIniPath);
+			UE_LOG(LogTemp, Warning, TEXT("Updated Value: %s"), *KeyCodeValue);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Value is not expired. No update performed."));
+		}
+	}
+	else // If the KeyVariable does not exist, add it
+	{
+		GConfig->SetString(
+			TEXT("/Script/Invo.UInvoFunctions"),
+			*KeyVariable,
+			*KeyCodeValue,
+			SecretsNormalizeConfigIniPath
+		);
+		GConfig->Flush(false, SecretsNormalizeConfigIniPath);
+		UE_LOG(LogTemp, Warning, TEXT("Added New Key: %s with Value: %s"), *KeyVariable, *KeyCodeValue);
+	}
+}
+
+bool UInvoFunctions::IsExpired(const FString& Value, const FString& Value2)
+{
+	// Here, you should implement the logic to check whether the value is expired.
+	// Return true if expired, false otherwise.
+
+	// Example:
+	// return Value == TEXT("expired"); // Replace this with your actual condition
+	return Value == Value2; // Placeholder, replace with your actual code
+}
+
+bool UInvoFunctions::InitializeAESKey(const FString& HexKeyString, FAES::FAESKey& Key)
+{
+	if (HexKeyString.Len() != FAES::FAESKey::KeySize * 2) // Each byte is represented by 2 hex characters
+	{
+		// Invalid hex string size
+		UE_LOG(LogTemp, Error, TEXT("Invalid hex key size."));
+		return false;
+	}
+
+	for (int32 Index = 0; Index < HexKeyString.Len(); Index += 2)
+	{
+		TCHAR Char1 = HexKeyString[Index];
+		TCHAR Char2 = HexKeyString[Index + 1];
+
+		if (FChar::IsHexDigit(Char1) && FChar:: IsHexDigit(Char2))
+		{
+			int32 HighNibble = Char1 <= TEXT('9') ? Char1 - TEXT('0') : Char1 - TEXT('A') + 10;
+			int32 LowNibble = Char2 <= TEXT('9') ? Char2 - TEXT('0') : Char2 - TEXT('A') + 10;
+
+			Key.Key[Index / 2] = (HighNibble << 4) + LowNibble;
+		}
+		else
+		{
+			// Invalid character in hex string or conversion failed
+			UE_LOG(LogTemp, Error, TEXT("Failed to convert hex key to bytes."));
+			return false;
+		}
+	}
+
+	return true;
+}
+
+void UInvoFunctions:: TestEncryptDecrypt(const FString& PlainText, const FString& KeyString, FString& EncryptedHexStringOut)
+{
+	// 1. Generate a 256-bit key and convert it to FAESKey
+	//FString KeyString = TEXT("1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF"); // Example 256-bit key as a string
+	// Ensure Key.Key is filled with bytes from KeyString (you might want to convert hex to bytes if necessary)
+
+
+	if (!InitializeAESKey(KeyString, InvoPrivate::Key))
+		return;
+
+	// 2. Define a string to encrypt
+	//FString PlainText = TEXT("4/0AfJohXkqyycBbdQhBEnAQY_4fErjMbDqLSdf8mn8tIhhmaouH8Kum4c8yc9US_OXnbuL4g");
+
+	// 3. Convert the string into a byte array (UTF-8 example)
+	for (TCHAR c : PlainText)
+	{
+		InvoPrivate::AuthCodePlainTextBytes.Add(static_cast<uint8>(c));
+	}
+
+	// Ensure the data is a multiple of 16 bytes (128 bits)
+	while (InvoPrivate::AuthCodePlainTextBytes.Num() % 16 != 0)
+	{
+		InvoPrivate::AuthCodePlainTextBytes.Add(0);
+	}
+
+	// 4. Encrypt the data
+	FAES::EncryptData(InvoPrivate::AuthCodePlainTextBytes.GetData(), InvoPrivate::AuthCodePlainTextBytes.Num(), InvoPrivate::Key);
+
+	// Printing the encrypted data as a hex string
+	FString EncryptedHexString = BytesToHex(InvoPrivate::AuthCodePlainTextBytes);
+	UE_LOG(LogTemp, Warning, TEXT("Encrypted Hex String: %s"), *EncryptedHexString);
+	EncryptedHexStringOut = EncryptedHexString;
+
+
+
+	// 5. Decrypt the data back (for testing)
+	//FAES::DecryptData(InvoPrivate::AuthCodePlainTextBytes.GetData(), InvoPrivate::AuthCodePlainTextBytes.Num(), InvoPrivate::Key);
+
+	TArray<uint8> BytesOut;
+	HexToBytes(EncryptedHexStringOut, BytesOut);
+
+	FAES::DecryptData(BytesOut.GetData(), BytesOut.Num(), InvoPrivate::Key);
+
+	// Convert back to string and compare with the original
+	FString DecryptedText;
+	for (uint8 b : BytesOut)
+	{
+		if (b != 0) // Skip padding
+		{
+			DecryptedText += static_cast<TCHAR>(b);
+		}
+	}
+
+	if (DecryptedText == PlainText)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Encryption and decryption test passed. and Text is %s"),*DecryptedText);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Encryption and decryption test failed."));
+	}
+}
+
+FString UInvoFunctions:: BytesToHex(const TArray<uint8>& Bytes)
+{
+	FString HexString;
+	for (uint8 Byte : Bytes)
+	{
+		HexString.Append(FString::Printf(TEXT("%02x"), Byte));
+	}
+	return HexString;
 }

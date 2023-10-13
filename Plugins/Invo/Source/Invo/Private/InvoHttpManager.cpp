@@ -6,6 +6,9 @@
 #include "Runtime/Online/HTTP/Public/HttpModule.h"
 #include "Runtime/Online/HTTP/Public/Interfaces/IHttpRequest.h"
 #include "Runtime/Online/HTTP/Public/Interfaces/IHttpResponse.h"
+//#include "ThirdParty/OpenSSL/include/openssl/aes.h"
+//#include "ThirdParty/OpenSSL/include/openssl/rand.h"
+
 
 UInvoHttpManager* UInvoHttpManager::Instance = nullptr;
 
@@ -23,7 +26,7 @@ UInvoHttpManager* UInvoHttpManager::GetInstance()
     return Instance;
 }
 
-void UInvoHttpManager::MakeHttpRequest(const FString& URL, const FString& HttpMethod, const TMap<FString, FString>& Headers, const FString& Payload, HttpRequestCallback Callback)
+void UInvoHttpManager::MakeHttpRequest(const FString& URL, const FString& HttpMethod, const TMap<FString, FString>& Headers, const TMap<FString, FString>& FormData, HttpRequestCallback Callback)
 {
     // Create HTTP Request
     TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
@@ -32,8 +35,8 @@ void UInvoHttpManager::MakeHttpRequest(const FString& URL, const FString& HttpMe
     {
         // Trigger Google authentication process again
         // Maybe show a message to the user or log it
-        UE_LOG(LogTemp, Warning, TEXT("Auth code not available. Please authenticate again."));
-        return;
+        //UE_LOG(LogTemp, Warning, TEXT("Auth code not available. Please authenticate again."));
+        //return;
     }
 
     // Set HTTP method (GET, POST, PUT, etc.)
@@ -45,7 +48,9 @@ void UInvoHttpManager::MakeHttpRequest(const FString& URL, const FString& HttpMe
     if (Headers.IsEmpty())
     {
         Request->SetHeader(TEXT("User-Agent"), TEXT("X-UnrealEngine-Agent"));
-        Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+        Request->SetHeader(TEXT("Content-Type"), TEXT("application/x-www-form-urlencoded"));
+        //Request->SetHeader(TEXT("Content-Type"), TEXT("application/x-www-form-urlencoded"));
+
     }
     else
 
@@ -56,8 +61,47 @@ void UInvoHttpManager::MakeHttpRequest(const FString& URL, const FString& HttpMe
         }
     }
     // Set headers, if any
- 
-    Request->SetHeader(TEXT("auth_code"), AuthCode);
+
+    FString SecretsIniFilePath = FPaths::ProjectConfigDir() + TEXT("Secrets.ini");
+    FString SecretsNormalizeConfigIniPath = FConfigCacheIni::NormalizeConfigIniPath(SecretsIniFilePath);
+
+    FPaths::NormalizeFilename(SecretsNormalizeConfigIniPath);
+    FString AuthCodeKey;
+    if (GConfig->GetString(TEXT("/Script/Invo.UInvoFunctions"), TEXT("AUTHCODEKEY"), AuthCodeKey, SecretsNormalizeConfigIniPath))
+    {
+        FString HexKeyString = TEXT("1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF"); // 64 hex characters
+
+        FString DecryptDataAuthCode = UInvoFunctions::DecryptData(AuthCodeKey, HexKeyString);
+        UE_LOG(LogTemp, Warning, TEXT("Decrypted AuthCode Key: %s"), *DecryptDataAuthCode);
+        if (!DecryptDataAuthCode.IsEmpty())
+        {
+          
+            Request->SetHeader(TEXT("auth_code"), DecryptDataAuthCode);
+
+        }
+        else
+        {
+            UE_LOG(LogTemp, Error, TEXT("AuthCode Key is empty: %s"), *AuthCodeKey);
+            return;
+
+        }
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("Failed to get authcode key from config file"));
+        return;
+    }
+
+    // Format the payload as x-www-form-urlencoded
+    FString Payload;
+    for (const auto& Pair : FormData)
+    {
+        if (!Payload.IsEmpty())
+        {
+            Payload.Append(TEXT("&"));
+        }
+        Payload.Append(FString::Printf(TEXT("%s=%s"), *Pair.Key, *Pair.Value));
+    }
 
     Request->SetContentAsString(Payload);
 
@@ -131,5 +175,22 @@ void UInvoHttpManager::HttpRequestCompleted(FHttpRequestPtr Request, FHttpRespon
 void UInvoHttpManager::SetAuthCode(FString AuthCodeString)
 {
     AuthCode = AuthCodeString;
+}
+
+FString UInvoHttpManager::GetAuthCode() const
+{
+    if (!AuthCode.IsEmpty())
+        return AuthCode;
+    return "None String";
+}
+
+
+
+void UInvoHttpManager::YourAESFunction()
+{
+  
+    //AES_set_encrypt_key(Key, 256, &encryptKey);
+
+    // Your encryption and decryption code here...
 }
 
