@@ -648,7 +648,7 @@ void UInvoFunctions::OpenInvoWebPage(UObject* WorldContextObject, FString Url = 
 	OpenWebView(ReactWepPageUrl);
 }
 
-void UInvoFunctions::OpenInvoInitWebPage(UObject* WorldContextObject, FString Url = "")
+void UInvoFunctions::OpenInvoInitWebPage()
 {
 	//FString URL = TEXT("https://www.ourinvo.com");
 	//FPlatformProcess::LaunchURL(*URL, nullptr, nullptr);

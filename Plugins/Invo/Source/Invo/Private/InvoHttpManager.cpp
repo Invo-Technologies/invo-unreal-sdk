@@ -6,6 +6,8 @@
 #include "Runtime/Online/HTTP/Public/HttpModule.h"
 #include "Runtime/Online/HTTP/Public/Interfaces/IHttpRequest.h"
 #include "Runtime/Online/HTTP/Public/Interfaces/IHttpResponse.h"
+#include "Runtime/Core/Public/Misc/MessageDialog.h"
+
 //#include "ThirdParty/OpenSSL/include/openssl/aes.h"
 //#include "ThirdParty/OpenSSL/include/openssl/rand.h"
 
@@ -82,6 +84,9 @@ void UInvoHttpManager::MakeHttpRequest(const FString& URL, const FString& HttpMe
         else
         {
             UE_LOG(LogTemp, Error, TEXT("AuthCode Key is empty: %s"), *AuthCodeKey);
+            FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Need to Initiliaze Invo SDK first.")));
+
+            UInvoFunctions::OpenInvoInitWebPage();
             return;
 
         }
@@ -89,6 +94,9 @@ void UInvoHttpManager::MakeHttpRequest(const FString& URL, const FString& HttpMe
     else
     {
         UE_LOG(LogTemp, Error, TEXT("Failed to get authcode key from config file"));
+        FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Need to Initiliaze Invo SDK first.")));
+
+        UInvoFunctions::OpenInvoInitWebPage();
         return;
     }
 

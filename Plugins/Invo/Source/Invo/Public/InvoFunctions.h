@@ -382,7 +382,7 @@ public:
 	static void OpenInvoWebPage(UObject* WorldContextObject, FString Url);
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
-	static void OpenInvoInitWebPage(UObject* WorldContextObject, FString Url);
+	static void OpenInvoInitWebPage();
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
 	static void CloseInvoWebBrowser();
