@@ -29,7 +29,7 @@ This project contains the Invo plugin for Unreal Engine 5.2, which was built fro
 
 3. Navigate to the project directory and open the Terminal.
 
-4. In the Terminal, run the command `./Fun.command` to generate Xcode project files.
+4. In the Terminal, run the command `./MyGame.command` to generate Xcode project files.
 
 5. Open the newly created `.xcworkspace` file in Xcode.
 
@@ -51,6 +51,16 @@ This project contains the Invo plugin for Unreal Engine 5.2, which was built fro
 
 (Provide information about the project's license, if any)
 
+## Installation and Setup
+
+### Step 1: Installing the Plugin
+
+1. **Create a Plugins Folder:** Navigate to the root directory of your Unreal Engine project. Inside your game project directory, create a new folder and name it `Plugins` if it doesn’t already exist.
+
+2. **Add the Invo Plugin:** Drag and drop the `Invo` folder (containing the plugin files) into the `Plugins` folder. 
+
+
+
 ## Setting Up Secret Key
 
 The Invo plugin requires a secret key to function properly. To set up the secret key:
@@ -64,10 +74,14 @@ The Invo plugin requires a secret key to function properly. To set up the secret
    ```ini
    [/Script/Invo.UInvoFunctions]
    SecretKey=YourActualSecretKey
+   AuthCodeKey=YourAuthCodeKey
    ```
 
-   Replace `YourActualSecretKey` with your actual secret key.
+   Replace `YourActualSecretKey` with your actual secret key. (optional) and 
+   Replace `AuthCodeKey` with your actual autcode key you get from the OurInvo Dashboard.  
 
-4. Save and close the `Secrets.ini` file.
+
+
+5. Save and close the `Secrets.ini` file.
 
 The `Secrets.ini` file should not be included in your version control system. Ensure that it's listed in your `.gitignore` file to prevent it from being committed to Git.
