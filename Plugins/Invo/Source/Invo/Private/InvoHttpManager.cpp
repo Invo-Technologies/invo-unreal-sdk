@@ -7,6 +7,14 @@
 #include "Runtime/Online/HTTP/Public/Interfaces/IHttpRequest.h"
 #include "Runtime/Online/HTTP/Public/Interfaces/IHttpResponse.h"
 #include "Runtime/Core/Public/Misc/MessageDialog.h"
+#include "Kismet/GameplayStatics.h"
+#include "Runtime/Engine/Classes/Engine/World.h"
+
+
+#include "GameFramework/PlayerController.h"
+#include "Kismet/GameplayStatics.h"
+#include "Engine/GameViewportClient.h"
+#include "GameFramework/WorldSettings.h"
 
 //#include "ThirdParty/OpenSSL/include/openssl/aes.h"
 //#include "ThirdParty/OpenSSL/include/openssl/rand.h"
@@ -162,7 +170,7 @@ void UInvoHttpManager::HttpRequestCompleted(FHttpRequestPtr Request, FHttpRespon
         //InvoOnHttpRequestCompletedEvent.Broadcast(bWasSuccessful, Response.IsValid() ? Response->GetContentAsString() : TEXT("Success Response"));
       
        OnHttpRequestCompleted.Broadcast(bWasSuccessful, Response.IsValid() ? Response->GetContentAsString() : TEXT("Invalid Response"));
-        
+
         
 
         return;  // Exit the function as the successful response has been handled
@@ -202,3 +210,186 @@ void UInvoHttpManager::YourAESFunction()
     // Your encryption and decryption code here...
 }
 
+
+void UInvoHttpManager::ParseJSON(const FString& JSONString, TSharedPtr<FJsonObject>& OutDataObject, FString& OutMessage, bool& OutResults)
+{
+    TSharedPtr<FJsonObject> JsonObject;
+    TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(JSONString);
+
+    if (FJsonSerializer::Deserialize(Reader, JsonObject) && JsonObject.IsValid())
+    {
+        FString Message = JsonObject->GetStringField("message");
+        bool Result = JsonObject->GetBoolField("result");
+        OutMessage = Message;
+        OutResults = Result;
+
+        TSharedPtr<FJsonObject> DataObject = JsonObject->GetObjectField("data");
+        if (DataObject.IsValid())
+        {
+            OutDataObject = DataObject;
+            //int32 PlayerId = DataObject->GetIntegerField("player_id");
+            //int32 GameId = DataObject->GetIntegerField("game_id");
+            //FString PlayerName = DataObject->GetStringField("player_name");
+
+            // Now you can use these values as needed
+            //UE_LOG(LogTemp, Warning, TEXT("Message: %s"), *Message);
+            //UE_LOG(LogTemp, Warning, TEXT("Player ID: %d"), PlayerId);
+            //UE_LOG(LogTemp, Warning, TEXT("Game ID: %d"), GameId);
+            //UE_LOG(LogTemp, Warning, TEXT("Player Name: %s"), *PlayerName);
+        }
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Couldn't deserialize the JSON"));
+    }
+}
+
+
+void UInvoHttpManager::CreatePlayerID(const FString& UniquePlayerID)
+{
+    // Player Registration 
+
+    UWorld* World = GWorld->GetWorld();
+    const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
+
+
+    if (World)
+    {
+
+
+        UE_LOG(LogTemp, Warning, TEXT("Testing player ID %s"), *UniquePlayerID);
+
+
+        if (!Settings->Player_ID.IsEmpty())
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Player %s is already registered"), *Settings->Player_ID);
+            return;
+        }
+
+        // Settings from Invo SDK Feilds
+
+        TMap<FString, FString> FormData;
+
+        FormData.Add(TEXT("game_id"), Settings->Game_ID);
+        FormData.Add(TEXT("player_name"), UniquePlayerID);
+
+
+        // 3. Directly make the HTTP request without using UInvoFunctions.
+        FString Endpoint = "https://api.dev.ourinvo.com/v1/external/player/register"; // Replace with your actual server address
+        FString HttpMethod = "POST";
+
+        //4. Headers 
+        TMap<FString, FString> Headers;
+
+        // Create HTTP Request
+        TSharedRef<IHttpRequest, ESPMode::ThreadSafe> HttpRequest = FHttpModule::Get().CreateRequest();
+
+        HttpRequest->SetURL(Endpoint);
+        HttpRequest->SetVerb(HttpMethod);
+        HttpRequest->SetHeader(TEXT("User-Agent"), TEXT("X-UnrealEngine-Agent"));
+        HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/x-www-form-urlencoded"));
+
+        FString Payload;
+        for (const auto& Pair : FormData)
+        {
+            if (!Payload.IsEmpty())
+            {
+                Payload.Append(TEXT("&"));
+            }
+            Payload.Append(FString::Printf(TEXT("%s=%s"), *Pair.Key, *Pair.Value));
+        }
+
+        HttpRequest->SetContentAsString(Payload);
+
+
+        for (const auto& Header : Headers)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Headers %s"), *Header.Value);
+
+        }
+        UE_LOG(LogTemp, Warning, TEXT("Payload is  %s"), *Payload);
+
+        // Make the HTTP Request
+        UInvoHttpManager::GetInstance()->MakeHttpRequest(Endpoint, HttpMethod, Headers, FormData,
+            [&](const bool bSuccess, const FString& ResponseContent)
+            {
+
+                if (ValidateHttpManagerResponseContent(ResponseContent))
+                {
+                	// Handle the valid response
+                	// Log the response's content as a string.
+                	FString StringbSuccess = bSuccess ? "True" : "False";
+                	UE_LOG(LogTemp, Warning, TEXT("HTTP Response: %s and is bSucess %s"), *ResponseContent, *StringbSuccess);
+                
+                    TSharedPtr<FJsonObject> OutDataObject;
+                    FString OutMessage;
+                    bool OutResults;
+                    ParseJSON(ResponseContent, OutDataObject, OutMessage, OutResults);
+                    int32 PlayerId = OutDataObject->GetIntegerField("player_id");
+                    int32 GameId = OutDataObject->GetIntegerField("game_id");
+                    FString PlayerName = OutDataObject->GetStringField("player_name");
+                    FString PlayerIDString = FString::FromInt(PlayerId);
+                    if (!UInvoFunctions::CheckSecretsIni("PlayerID"))
+                    {
+                        UE_LOG(LogTemp, Warning, TEXT("PlayerId %s is created "), *PlayerIDString);
+                        UInvoFunctions::UpdateSecretsIni("PlayerID", PlayerIDString);
+                        UInvoFunctions::InvoShowPurchaseWidget();
+
+                    }
+                    else
+                    {
+                        UE_LOG(LogTemp, Warning, TEXT("PlayerId %s is already creaed."), *PlayerIDString);
+                    }
+                   
+                }
+                else
+                {
+                	// Handle the invalid response
+                	UE_LOG(LogTemp, Warning, TEXT("Failed to get a valid response with response %s"), *ResponseContent);
+                
+                	FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Failed to get a valid response")));
+                
+                }
+            });
+
+    }
+    else 
+    {
+        UE_LOG(LogTemp, Warning, TEXT("No world"));
+    }
+
+}
+
+
+bool UInvoHttpManager::ValidateHttpManagerResponseContent(const FString& ResponseContent)
+{
+    TSharedPtr<FJsonObject> JsonObject;
+    TSharedRef<TJsonReader<TCHAR>> JsonReader = TJsonReaderFactory<TCHAR>::Create(ResponseContent);
+
+    // 1. Check if it's valid JSON
+    if (!FJsonSerializer::Deserialize(JsonReader, JsonObject) || !JsonObject.IsValid())
+    {
+        UE_LOG(LogTemp, Error, TEXT("Response is not valid JSON."));
+        return false;
+    }
+
+    // 2. Check for Expected Fields
+    if (!JsonObject->HasField("result") || !JsonObject->HasField("message"))
+    {
+        UE_LOG(LogTemp, Error, TEXT("Mandatory fields are missing."));
+        return false;
+    }
+
+    // 3. Validate Field Values
+    // Example: Ensure "expectedField1" is a string and isn't empty
+    FString expectedField1Value = JsonObject->GetStringField("message");
+    if (expectedField1Value.IsEmpty())
+    {
+        UE_LOG(LogTemp, Error, TEXT("'success' value shouldn't be empty."));
+        // return false;
+    }
+
+    // Add more validations as needed
+
+    return true;  // If all checks pass
+}

@@ -320,11 +320,31 @@ public:
 
 	/**
 	* Applications ID or Game_ID
-	* @param OutMaxPacket [int32&] Maximum packet size.
-	* @return [bool] True if valid UNetConnection was found from PlayerController. False otherwise.
 	**/
 	UPROPERTY(config, EditAnywhere, Category = Settings)
 	FString Game_ID;
+
+	/**
+	* Applications ID or Player_ID
+	**/
+
+	UPROPERTY(config, EditAnywhere, Category = Settings)
+	FString Player_ID;
+
+	/**
+	* Applications ID or PlayerGmail
+	**/
+	UPROPERTY(config, EditAnywhere, Category = Settings)
+	FString PlayerEmail;
+
+	/**
+	* Applications ID or PlayerName
+	**/
+
+	UPROPERTY(config, EditAnywhere, Category = Settings)
+	FString PlayerName;
+
+
 
 
 	/**
@@ -474,6 +494,7 @@ public:
 	static TArray<uint8> UnpadData(const TArray<uint8>& Data);
 	
 	static void UpdateSecretsIni(FString KeyVarable, FString KeyCodeValue);
+	static bool CheckSecretsIni(FString KeyVariable);
 
 	static bool IsExpired(const FString& Value, const FString& Value2);
 
@@ -484,6 +505,11 @@ public:
 	static FString BytesToHex(const TArray<uint8>& Bytes);
 
 	//static TArray<uint8> AuthCodePlainTextBytes;
+
+	static void GenerateUniquePlayerID(FString& OutUniquePlayerID);
+
+	UFUNCTION(BlueprintCallable, Category = "Invo")
+	static bool FillBPObjectFromJSON(const FString& JSONString, UObject* BPObject);
 
 
 	bool IsHexDigit(TCHAR Character)
@@ -521,6 +547,7 @@ private:
 	static void InvoAPIJsonReturn(const FString& EndPoint, FString& JsonData, TFunction<void(TSharedPtr<FJsonObject>)> Callback);
 
 	static void SimulateAPICall(FOnInvoAPICallCompleted OnCompleted);
+
 
 	UFUNCTION()
 	static void HandleURLChange(const FString& NewUrl);

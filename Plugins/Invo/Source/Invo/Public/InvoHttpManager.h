@@ -42,6 +42,9 @@ public:
 
     FString GetAuthCode() const;
 
+    void CreatePlayerID(const FString& UniquePlayerID);
+    void ParseJSON(const FString& JSONString, TSharedPtr<FJsonObject>& OutDataObject, FString& OutMessage, bool& OutResults);
+
 
 private:
     static UInvoHttpManager* Instance;
@@ -51,6 +54,8 @@ private:
     FString AuthCode;
 
     void YourAESFunction();
+    bool ValidateHttpManagerResponseContent(const FString& ResponseContent);
+
   
     //FHttpResponseReceived ResponseContentDelegate;
 };

@@ -56,7 +56,7 @@ public class Invo : ModuleRules
                 "HTTP",
                 "WebBrowser",
                 "UMG",
-                "WebBrowserWidget"
+                "WebBrowserWidget",
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

@@ -208,7 +208,7 @@ void SInvoTradeWidget::SetupWidget()
     // ... other setup code ...
 
     // Bind the callback to the delegate.
-    UInvoHttpManager::GetInstance()->OnHttpRequestCompleted.AddDynamic(this, &SInvoTradeWidget::HandleHttpRequestCompleted);
+    //UInvoHttpManager::GetInstance()->OnHttpRequestCompleted.AddDynamic(this, &SInvoTradeWidget::HandleHttpRequestCompleted);
 }
 
 

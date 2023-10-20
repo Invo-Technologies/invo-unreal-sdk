@@ -5,6 +5,7 @@
 #include "GameFramework/PlayerController.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Kismet/GameplayStatics.h"
+#include "Runtime/Engine/Classes/GameFramework/OnlineReplStructs.h"
 #include "Engine/NetConnection.h"
 #include "Engine/GameViewportClient.h"
 #include "GameFramework/WorldSettings.h"
@@ -47,7 +48,7 @@
 #include "HAL/PlatformFilemanager.h"
 #include "HAL/PlatformProcess.h"
 #include "Widgets/Layout/SBox.h"
-#include "WebBrowser/Public/SWebBrowser.h"
+//#include "WebBrowser/Public/SWebBrowser.h"
 #include "GenericPlatform/GenericPlatformMisc.h"
 #include "Runtime/WebBrowser/Public/WebBrowserModule.h"
 #include "Widgets/SWeakWidget.h"
@@ -1414,7 +1415,6 @@ void UInvoFunctions::InvoShowTicketWidget()
 {
 	// Create a Ticket Widget instance
 	
-
 	Window = SNew(SWindow)
 		.Title(NSLOCTEXT("InvoTicket", "WindowTitle", "Invo Ticket System"))
 		.ClientSize(FVector2D(600, 500))
@@ -1892,6 +1892,29 @@ void UInvoFunctions::UpdateSecretsIni(FString KeyVariable, FString KeyCodeValue)
 	}
 }
 
+bool UInvoFunctions::CheckSecretsIni(FString KeyVariable)
+{
+	// Specify the path to the Secrets.ini file
+	FString SecretsIniFilePath = FPaths::ProjectConfigDir() + TEXT("Secrets.ini");
+	FString SecretsNormalizeConfigIniPath = FConfigCacheIni::NormalizeConfigIniPath(SecretsIniFilePath);
+	FPaths::NormalizeFilename(SecretsNormalizeConfigIniPath);
+
+	// Get the existing value
+	FString ExistingValue;
+	if (GConfig->GetString(TEXT("/Script/Invo.UInvoFunctions"), *KeyVariable, ExistingValue, SecretsNormalizeConfigIniPath))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Existing Value: %s"), *ExistingValue);
+		return true;
+	}
+	else // If the KeyVariable does not exist, add it
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Existing Value: %s does not exsist"), *ExistingValue);
+		return false;
+	}
+	return true;
+}
+
+
 bool UInvoFunctions::IsExpired(const FString& Value, const FString& Value2)
 {
 	// Here, you should implement the logic to check whether the value is expired.
@@ -2005,4 +2028,72 @@ FString UInvoFunctions:: BytesToHex(const TArray<uint8>& Bytes)
 		HexString.Append(FString::Printf(TEXT("%02x"), Byte));
 	}
 	return HexString;
+}
+
+void UInvoFunctions::GenerateUniquePlayerID(FString& OutUniquePlayerID)
+{
+	for (const FWorldContext& Context : GEngine->GetWorldContexts())
+	{
+		UWorld* World = Context.World();
+		if (World && World->IsGameWorld())
+		{
+			APlayerController* PlayerController = UGameplayStatics::GetPlayerController(World,0);
+			if (PlayerController)
+			{
+				uint32 UniqueID = PlayerController->GetUniqueID();
+				FString UniqueIDString = FString::FromInt(UniqueID);
+				FString Message = FString::Printf(TEXT("Creating Unique PlayerID for SDK %s"), *UniqueIDString);
+				GEngine->AddOnScreenDebugMessage(1, 3.0, FColor::Green, Message);
+				OutUniquePlayerID = UniqueIDString;
+
+				FString SecretsIniFilePath = FPaths::ProjectConfigDir() + TEXT("Secrets.ini");
+				FString SecretsNormalizeConfigIniPath = FConfigCacheIni::NormalizeConfigIniPath(SecretsIniFilePath);
+
+				FPaths::NormalizeFilename(SecretsNormalizeConfigIniPath);
+				FString PlayerIdKey;
+				TArray<uint8> OutAuthCodeBytes;
+				if (GConfig->GetString(TEXT("/Script/Invo.UInvoFunctions"), TEXT("PLAYERID"), PlayerIdKey, SecretsNormalizeConfigIniPath))
+				{
+
+					UE_LOG(LogTemp, Warning, TEXT("Encryped AuthCode Hex Key: %s"), *PlayerIdKey);
+					if (!PlayerIdKey.IsEmpty())
+					{
+
+					}
+					else
+					{
+
+						UE_LOG(LogTemp, Error, TEXT("AuthCode Key is empty: %s"), *PlayerIdKey);
+					}
+				}
+				else
+				{
+					UE_LOG(LogTemp, Error, TEXT("Failed to get authcode key from config file"));
+				}
+
+				return;
+				
+			}
+		}
+	}
+	
+}
+
+bool UInvoFunctions::FillBPObjectFromJSON(const FString& JSONString, UObject* BPObject)
+{
+	if (BPObject == nullptr)
+	{
+		return false;
+	}
+
+	TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(JSONString);
+	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject());
+
+	if (FJsonSerializer::Deserialize(Reader, JsonObject) && JsonObject.IsValid())
+	{
+		//JsonObjectConverter::JsonObjectToUStruct(JsonObject, BPObject->GetClass(), BPObject, 0, 0);
+		return true;
+	}
+
+	return false;
 }

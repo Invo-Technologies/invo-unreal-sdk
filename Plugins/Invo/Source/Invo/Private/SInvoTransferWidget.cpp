@@ -16,13 +16,15 @@
 #include "Runtime/Core/Public/Misc/MessageDialog.h"
 #include "Runtime/SlateCore/Public/Widgets/SWidget.h"
 
+
+
 void SInvoTransferWidget::Construct(const FArguments& InArgs)
 {
     // Populate PriorityOptions
-    PriorityOptions.Add(MakeShared<FString>("Low"));
-    PriorityOptions.Add(MakeShared<FString>("Medium"));
-    PriorityOptions.Add(MakeShared<FString>("High"));
-    PriorityOptions.Add(MakeShared<FString>("Urgent"));
+    PriorityOptions.Add(MakeShared<FString>("Sonic"));
+    PriorityOptions.Add(MakeShared<FString>("Counter Strike"));
+    PriorityOptions.Add(MakeShared<FString>("Ria Ation Adventure"));
+    PriorityOptions.Add(MakeShared<FString>("Call Of Duty"));
 
     ChildSlot
         [
@@ -33,6 +35,37 @@ void SInvoTransferWidget::Construct(const FArguments& InArgs)
                 [
                     SNew(SVerticalBox)
           
+                        //+ SVerticalBox::Slot()
+                        //.FillHeight(1.0f)
+                        //.HAlign(HAlign_Left)
+                        //.Padding(10.0f)
+                        //[
+                        //    SNew(SHorizontalBox)
+                        //        // Group for "Game ID"
+                        //        + SHorizontalBox::Slot()
+                        //        .FillWidth(0.25f)  // This ensures each group takes up 25% of the available width
+                        //        
+                        //        .Padding(5.0f)
+                        //        [
+                        //            SNew(SVerticalBox)
+                        //                + SVerticalBox::Slot()
+                        //                .AutoHeight()
+                        //                [
+                        //                    SNew(STextBlock)
+                        //                        .Text(FText::FromString("Game Name:"))
+                        //                ]
+                        //                + SVerticalBox::Slot()
+                        //                .AutoHeight()
+                        //                [
+                        //                    SAssignNew(GameIDTextBox, SEditableTextBox)
+                        //                        .HintText(FText::FromString(""))
+                        //                        .MinDesiredWidth(200.0f) // This sets the minimum width
+                        //
+                        //                ]
+                        //        ]
+                        //]
+
+                        
                         + SVerticalBox::Slot()
                         .FillHeight(1.0f)
                         .HAlign(HAlign_Left)
@@ -42,7 +75,6 @@ void SInvoTransferWidget::Construct(const FArguments& InArgs)
                                 // Group for "Game ID"
                                 + SHorizontalBox::Slot()
                                 .FillWidth(0.25f)  // This ensures each group takes up 25% of the available width
-                                
                                 .Padding(5.0f)
                                 [
                                     SNew(SVerticalBox)
@@ -50,52 +82,29 @@ void SInvoTransferWidget::Construct(const FArguments& InArgs)
                                         .AutoHeight()
                                         [
                                             SNew(STextBlock)
-                                                .Text(FText::FromString("Target Game ID:"))
+                                                .Text(FText::FromString("Select Game:"))
                                         ]
                                         + SVerticalBox::Slot()
                                         .AutoHeight()
+                                        .Padding(5.0f)
                                         [
-                                            SAssignNew(GameIDTextBox, SEditableTextBox)
-                                                .HintText(FText::FromString("Enter Game ID"))
-                                                .MinDesiredWidth(200.0f) // This sets the minimum width
+                                            SAssignNew(PriorityComboBox, SComboBox<TSharedPtr<FString>>)
+                                                .OptionsSource(&PriorityOptions)
+                                                .OnGenerateWidget(this, &SInvoTransferWidget::GeneratePriorityComboBoxWidget)
+                                                .OnSelectionChanged(this, &SInvoTransferWidget::OnPriorityChanged)
+                                                
+                                                .InitiallySelectedItem(PriorityOptions[0])
+                                                [
+                                                    SNew(STextBlock)
+                                                        .Text(this, &SInvoTransferWidget::GetPriorityComboBoxText)
+                                                        .MinDesiredWidth(180.0f) // This sets the minimum width
 
+                                                ]
                                         ]
                                 ]
                         ]
 
-                        
-                       //+ SVerticalBox::Slot()
-                       //.FillHeight(1.0f)
-                       //.HAlign(HAlign_Left)
-                       //.Padding(10.0f)
-                       //[
-                       //     //Sew(SHorizontalBox)
-                       //     //  // Group for "Game ID"
-                       //     //  + SHorizontalBox::Slot()
-                       //     //  .FillWidth(0.25f)  // This ensures each group takes up 25% of the available width
-                       //     //  .Padding(5.0f)
-                       //     //  [
-                       //     //      SNew(SVerticalBox)
-                       //     //          + SVerticalBox::Slot()
-                       //     //          .AutoHeight()
-                       //     //          [
-                       //     //              SNew(STextBlock)
-                       //     //                  .Text(FText::FromString("From Player ID (Optional):"))
-                       //     //          ]
-                       //     //          + SVerticalBox::Slot()
-                       //     //          .AutoHeight()
-                       //     //          [
-                       //     //              SAssignNew(FromPlayerIDTextBox, SEditableTextBox)
-                       //     //                  .HintText(FText::FromString("Enter Player ID "))
-                       //     //                  .MinDesiredWidth(200.0f) // This sets the minimum width
-                       //     //
-                       //     //
-                       //     //          ]
-                       //     //  ]
-                       //]   //
-
-
-
+                    
                         +SVerticalBox::Slot()
                         .FillHeight(1.0f)
                         .HAlign(HAlign_Left)
@@ -157,36 +166,7 @@ void SInvoTransferWidget::Construct(const FArguments& InArgs)
                                 ]
                         ]
 
-                        + SVerticalBox::Slot()
-                        .FillHeight(1.0f)
-                        .HAlign(HAlign_Left)
-                        .Padding(10.0f)
-                        [
-                            SNew(SHorizontalBox)
-                                // Group for "Game ID"
-                                + SHorizontalBox::Slot()
-                                .FillWidth(0.25f)  // This ensures each group takes up 25% of the available width
-                                .Padding(5.0f)
-                                [
-                                    SNew(SVerticalBox)
-                                        + SVerticalBox::Slot()
-                                        .AutoHeight()
-                                        [
-                                            SNew(STextBlock)
-                                                .Text(FText::FromString("Default Currency Name:"))
-                                        ]
-                                        + SVerticalBox::Slot()
-                                        .AutoHeight()
-                                        [
-                                            SAssignNew(DefaultCurrencyNameTextBox, SEditableTextBox)
-                                                .HintText(FText::FromString("Enter Currency Name"))
-                                                .MinDesiredWidth(200.0f) // This sets the minimum width
-
-                                                
-                                        ]
-                                ]
-                        ]
-
+                        
                         + SVerticalBox::Slot()
                         .FillHeight(1.0f)
                         .HAlign(HAlign_Left)
@@ -274,111 +254,35 @@ void SInvoTransferWidget::SetupWidget()
     // ... other setup code ...
 
     // Bind the callback to the delegate.
-    UInvoHttpManager::GetInstance()->OnHttpRequestCompleted.AddDynamic(this, &SInvoTransferWidget::HandleHttpRequestCompleted);
+    //UInvoHttpManager::GetInstance()->OnHttpRequestCompleted.AddDynamic(this, &SInvoTransferWidget::HandleHttpRequestCompleted);
 }
 
 
 FReply SInvoTransferWidget::OnTransferClicked()
 {
-    // Settings from Invo SDK Feilds
-    const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
-    /*
-    // 1. Get the text from each of the UI fields.
-    FString GameID = GameIDTextBox->GetText().ToString();
-    FString TargetPlayerID = TargetPlayerIDTextBox->GetText().ToString();
-    FString Priority;
- 
-
-    // 2. Create a JSON payload with this data.
-    TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
-
-    // Settings from Invo SDK Feilds
-    const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
-
-    JsonObject->SetNumberField("user_id", 4);
-    JsonObject->SetNumberField("player_id", 4);
-    //JsonObject->SetNumberField("game_id", Settings->Game_ID);
-    JsonObject->SetStringField("subject", GameID);
-    //JsonObject->SetStringField("message_body", Description);
-    JsonObject->SetStringField("status", "inbox");
-
-
-    FString Payload;
-    TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Payload);
-    FJsonSerializer::Serialize(JsonObject.ToSharedRef(), Writer);
-
-    // 3. Directly make the HTTP request without using UInvoFunctions.
-    FString Endpoint = "http://127.0.0.1:3030/create_ticket"; // Replace with your actual server address
-    FString HttpMethod = "POST";
-
-    //4. Headers 
-    TMap<FString, FString> Headers;
-
-    // Create HTTP Request
-    TSharedRef<IHttpRequest, ESPMode::ThreadSafe> HttpRequest = FHttpModule::Get().CreateRequest();
-
-    HttpRequest->SetURL(Endpoint);
-    HttpRequest->SetVerb(HttpMethod);
-    HttpRequest->SetHeader(TEXT("User-Agent"), TEXT("X-UnrealEngine-Agent"));
-    HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
-    HttpRequest->SetContentAsString(Payload);
-
-
-    // Alert for empty fields
-    if (GameID.IsEmpty() ||TargetPlayerID.IsEmpty())
+    if (!UInvoFunctions::CheckSecretsIni("PlayerID"))
     {
-        // Show a Windows alert box
-        FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Game ID and Target Player ID cannot be empty.")));
-        return FReply::Unhandled();  // Do not proceed further
+        FString UniqueIDStr;
+        UInvoFunctions::GenerateUniquePlayerID(UniqueIDStr);
+        FString Message = FString::Printf(TEXT("OnTransferClicked with ID %s"), *UniqueIDStr);
+        GEngine->AddOnScreenDebugMessage(1, 3.0, FColor::Green, Message);
+        UE_LOG(LogTemp, Warning, TEXT("This log message is from file %s on line %d"), TEXT(__FILE__), __LINE__);
+
+        UInvoHttpManager::GetInstance()->CreatePlayerID(UniqueIDStr);
+        CloseTicketWidget();
+
+
     }
-
-
-    // ... (Your existing code to gather data and prepare the payload)
-
-
-    // Make the HTTP Request
-    UInvoHttpManager::GetInstance()->MakeHttpRequest(Endpoint, HttpMethod, Headers, Payload,
-        [this](const bool bSuccess, const FString& ResponseContent)
-        {
-            if (ValidateResponseContent(ResponseContent))
-            {
-                // Handle the valid response
-                // Log the response's content as a string.
-                FString StringbSuccess = bSuccess ? "True" : "False";
-                UE_LOG(LogTemp, Warning, TEXT("HTTP Response: %s and is bSucess %s"), *ResponseContent, *StringbSuccess);
-                FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Ticket Submited Succeefully.")));
-
-                UWorld* World = GWorld->GetWorld();
-
-                CloseTicketWidget();
-
-                // Restore player input and cursor mode
-                APlayerController* PlayerController = World->GetFirstPlayerController();
-
-                if (PlayerController)
-                {
-                    // Set the input mode back to the game
-                    FInputModeGameOnly InputMode;
-                    PlayerController->SetInputMode(InputMode);
-
-                    // Lock the mouse cursor to the center of the screen
-                    PlayerController->bShowMouseCursor = false;
-                    PlayerController->bEnableClickEvents = false;
-                    PlayerController->bEnableMouseOverEvents = false;
-                }
-            }
-            else
-            {
-                // Handle the invalid response
-                UE_LOG(LogTemp, Warning, TEXT("Failed to get a valid response."));
-                FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Failed to get a valid response")));
-
-            }
-        });
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("PlayerID already exsist. %s on line %d"), TEXT(__FILE__), __LINE__);
+        UInvoFunctions::InvoShowPurchaseWidget();
+        CloseTicketWidget();
 
 
 
-    */
+    }
+ 
     return FReply::Handled();
 }
 

@@ -24,7 +24,7 @@
 #include "HAL/PlatformFilemanager.h"
 #include "HAL/PlatformProcess.h"
 #include "Widgets/Layout/SBox.h"
-#include "WebBrowser/Public/SWebBrowser.h"
+//#include "WebBrowser/Public/SWebBrowser.h"
 #include "GenericPlatform/GenericPlatformMisc.h"
 #include "Runtime/WebBrowser/Public/WebBrowserModule.h"
 #include "Widgets/SWeakWidget.h"
@@ -94,24 +94,117 @@ void SInvoPurchaseWidget::SetupWidget()
     // ... other setup code ...
 
     // Bind the callback to the delegate.
-    UInvoHttpManager::GetInstance()->OnHttpRequestCompleted.AddDynamic(this, &SInvoPurchaseWidget::HandleHttpRequestCompleted);
+    //UInvoHttpManager::GetInstance()->OnHttpRequestCompleted.AddDynamic(this, &SInvoPurchaseWidget::HandleHttpRequestCompleted);
 }
 
 
 FReply SInvoPurchaseWidget::OnPurchaseClicked()
 {
-    /* if (WebBrowser.IsValid())
+  
+    const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
+
+    TMap<FString, FString> FormData;
+    
+    if (Settings->Player_ID.IsEmpty())
     {
-        
-        WebBrowser->GetSource([this](const FString& Result) {
-            FString HtmlString = Result;
-            FString CodeValue = ExtractCodeFromHTMLSource(HtmlString);
-            UE_LOG(LogTemp, Warning, TEXT("Extracted Code: %s"), *CodeValue);
-             
-            });
-        
+       // UInvoHttpManager::GetInstance()->CreatePlayerID();
     }
+  
+
+    FormData.Add(TEXT("player_id"), Settings->Player_ID);
+    FormData.Add(TEXT("game_id"), Settings->Game_ID);
+
+
+
+    /*
+    JsonObject->SetStringField("player_id", "2");
+    JsonObject->SetStringField("game_id", "17");
+    JsonObject->SetStringField("subject", Subject);
+    JsonObject->SetStringField("message_body", Description);
+    JsonObject->SetStringField("priority", Priority);
+    JsonObject->SetStringField("status", "inbox");
     */
+
+    //TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Payload);
+    //FJsonSerializer::Serialize(JsonObject.ToSharedRef(), Writer);
+
+    // 3. Directly make the HTTP request without using UInvoFunctions.
+    FString Endpoint = "https://api.dev.ourinvo.com/v1/external/purchase"; // Replace with your actual server address
+    FString HttpMethod = "POST";
+
+    //4. Headers 
+    TMap<FString, FString> Headers;
+
+    // Create HTTP Request
+    TSharedRef<IHttpRequest, ESPMode::ThreadSafe> HttpRequest = FHttpModule::Get().CreateRequest();
+
+    HttpRequest->SetURL(Endpoint);
+    HttpRequest->SetVerb(HttpMethod);
+    HttpRequest->SetHeader(TEXT("User-Agent"), TEXT("X-UnrealEngine-Agent"));
+    HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/x-www-form-urlencoded"));
+
+    FString Payload;
+    for (const auto& Pair : FormData)
+    {
+        if (!Payload.IsEmpty())
+        {
+            Payload.Append(TEXT("&"));
+        }
+        Payload.Append(FString::Printf(TEXT("%s=%s"), *Pair.Key, *Pair.Value));
+    }
+
+    HttpRequest->SetContentAsString(Payload);
+
+
+    for (const auto& Header : Headers)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Headers %s"), *Header.Value);
+
+    }
+    UE_LOG(LogTemp, Warning, TEXT("Payload is  %s"), *Payload);
+
+    // Make the HTTP Request
+    UInvoHttpManager::GetInstance()->MakeHttpRequest(Endpoint, HttpMethod, Headers, FormData,
+        [this](const bool bSuccess, const FString& ResponseContent)
+        {
+
+            if (ValidateResponseContent(ResponseContent))
+            {
+                // Handle the valid response
+                // Log the response's content as a string.
+                FString StringbSuccess = bSuccess ? "True" : "False";
+                UE_LOG(LogTemp, Warning, TEXT("HTTP Response: %s and is bSucess %s"), *ResponseContent, *StringbSuccess);
+                FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Ticket Submited Succeefully.")));
+
+                UWorld* World = GWorld->GetWorld();
+
+                CloseTicketWidget();
+
+                // Restore player input and cursor mode
+                APlayerController* PlayerController = World->GetFirstPlayerController();
+
+                if (PlayerController)
+                {
+                    // Set the input mode back to the game
+                    FInputModeGameOnly InputMode;
+                    PlayerController->SetInputMode(InputMode);
+
+                    // Lock the mouse cursor to the center of the screen
+                    PlayerController->bShowMouseCursor = false;
+                    PlayerController->bEnableClickEvents = false;
+                    PlayerController->bEnableMouseOverEvents = false;
+                }
+            }
+            else
+            {
+                // Handle the invalid response
+                UE_LOG(LogTemp, Warning, TEXT("Failed to get a valid response with response %s"), *ResponseContent);
+
+                FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Failed to get a valid response")));
+
+            }
+        });
+   
     return FReply::Handled();
 }
 

@@ -35,6 +35,9 @@ private:
 
     // Data
     TArray<TSharedPtr<FString>> PriorityOptions;
+    TArray<TSharedPtr<TMap<FString, FString>>> GameNameList;
+    //TSharedPtr<SComboBox<TMap<FString, FString>>> PriorityComboBox;
+
 
     // Event handlers
     FReply OnTransferClicked();
