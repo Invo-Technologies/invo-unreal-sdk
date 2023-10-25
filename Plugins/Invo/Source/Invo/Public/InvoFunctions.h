@@ -17,6 +17,8 @@ class SInvoTicketWidget;
 class SInvoTransferWidget;
 class SInvoPurchaseWidget;
 class SInvoTradeWidget;
+class SKeyInputDialog;
+
 // For CallBack Functions 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnInvoAPICallCompleted, bool, bSuccess);
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnCurrencyAmountFetchedBP, const FString&, CurrencyAmount);
@@ -466,6 +468,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Invo")
 	static void InvoShowTradeWidget();
 
+	// Displays the SKeyInputDialog
+	UFUNCTION(BlueprintCallable, Category = "Invo")
+	static void InvoShowSKeyInputDialog();
+
 
 	// Used to call for any UI Class
 	static void MakeHttpRequest(const FString& Url, const FString& HttpMethod, const FString& Content, TFunction<void(const bool, const FString&)> Callback);
@@ -475,7 +481,7 @@ public:
 
 
 	static FString EncryptData(const FString& DataToEncrypt, const FString& KeyString);
-	static FString DecryptData(const FString& DataToDecrypt, const FString& KeyString);
+	static FString DecryptData(const FString& DataToDecrypt, const FString& KeyString, const FString& KeyStringName ="AUTHCODEKEY");
 
 
 	static TArray<uint8> StringToBytes(const FString& String);
@@ -573,6 +579,9 @@ private:
 	static TSharedPtr<SInvoPurchaseWidget> InvoPurchaseWidget;
 
 	static TSharedPtr<SInvoTradeWidget> InvoTradeWidget;
+
+	static TSharedPtr<SKeyInputDialog> InvoSKeyInputDailogWidget;
+
 
 	// Helper Method for Extracting Code from HTML
 	static FString ExtractCodeFromHTMLSource(const FString& HtmlSource);

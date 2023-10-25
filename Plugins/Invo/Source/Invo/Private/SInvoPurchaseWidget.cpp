@@ -101,6 +101,8 @@ void SInvoPurchaseWidget::SetupWidget()
 FReply SInvoPurchaseWidget::OnPurchaseClicked()
 {
   
+    UInvoFunctions::InvoShowSKeyInputDialog();
+
     const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
 
     TMap<FString, FString> FormData;
@@ -164,46 +166,46 @@ FReply SInvoPurchaseWidget::OnPurchaseClicked()
     UE_LOG(LogTemp, Warning, TEXT("Payload is  %s"), *Payload);
 
     // Make the HTTP Request
-    UInvoHttpManager::GetInstance()->MakeHttpRequest(Endpoint, HttpMethod, Headers, FormData,
-        [this](const bool bSuccess, const FString& ResponseContent)
-        {
-
-            if (ValidateResponseContent(ResponseContent))
-            {
-                // Handle the valid response
-                // Log the response's content as a string.
-                FString StringbSuccess = bSuccess ? "True" : "False";
-                UE_LOG(LogTemp, Warning, TEXT("HTTP Response: %s and is bSucess %s"), *ResponseContent, *StringbSuccess);
-                FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Ticket Submited Succeefully.")));
-
-                UWorld* World = GWorld->GetWorld();
-
-                CloseTicketWidget();
-
-                // Restore player input and cursor mode
-                APlayerController* PlayerController = World->GetFirstPlayerController();
-
-                if (PlayerController)
-                {
-                    // Set the input mode back to the game
-                    FInputModeGameOnly InputMode;
-                    PlayerController->SetInputMode(InputMode);
-
-                    // Lock the mouse cursor to the center of the screen
-                    PlayerController->bShowMouseCursor = false;
-                    PlayerController->bEnableClickEvents = false;
-                    PlayerController->bEnableMouseOverEvents = false;
-                }
-            }
-            else
-            {
-                // Handle the invalid response
-                UE_LOG(LogTemp, Warning, TEXT("Failed to get a valid response with response %s"), *ResponseContent);
-
-                FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Failed to get a valid response")));
-
-            }
-        });
+    //voHttpManager::GetInstance()->MakeHttpRequest(Endpoint, HttpMethod, Headers, FormData,
+    // [this](const bool bSuccess, const FString& ResponseContent)
+    // {
+    //
+    //     if (ValidateResponseContent(ResponseContent))
+    //     {
+    //         // Handle the valid response
+    //         // Log the response's content as a string.
+    //         FString StringbSuccess = bSuccess ? "True" : "False";
+    //         UE_LOG(LogTemp, Warning, TEXT("HTTP Response: %s and is bSucess %s"), *ResponseContent, *StringbSuccess);
+    //         FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Ticket Submited Succeefully.")));
+    //
+    //         UWorld* World = GWorld->GetWorld();
+    //
+    //         CloseTicketWidget();
+    //
+    //         // Restore player input and cursor mode
+    //         APlayerController* PlayerController = World->GetFirstPlayerController();
+    //
+    //         if (PlayerController)
+    //         {
+    //             // Set the input mode back to the game
+    //             FInputModeGameOnly InputMode;
+    //             PlayerController->SetInputMode(InputMode);
+    //
+    //             // Lock the mouse cursor to the center of the screen
+    //             PlayerController->bShowMouseCursor = false;
+    //             PlayerController->bEnableClickEvents = false;
+    //             PlayerController->bEnableMouseOverEvents = false;
+    //         }
+    //     }
+    //     else
+    //     {
+    //         // Handle the invalid response
+    //         UE_LOG(LogTemp, Warning, TEXT("Failed to get a valid response with response %s"), *ResponseContent);
+    //
+    //         FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Failed to get a valid response")));
+    //
+    //     }
+    // });
    
     return FReply::Handled();
 }

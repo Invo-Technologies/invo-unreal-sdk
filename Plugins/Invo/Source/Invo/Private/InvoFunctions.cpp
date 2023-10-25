@@ -24,6 +24,7 @@
 #include "SInvoTransferWidget.h"
 #include "SInvoPurchaseWidget.h"
 #include "SInvoTradeWidget.h"
+#include "SKeyInputDialog.h"
 
 #include "Misc/OutputDeviceRedirector.h"
 #include "Runtime/Core/Public/Misc/Paths.h" // web brouser
@@ -1455,6 +1456,20 @@ void UInvoFunctions::InvoShowGDPRWidget()
 	FSlateApplication::Get().AddWindow(Window);
 }
 
+void UInvoFunctions::InvoShowSKeyInputDialog()
+{
+	// Create a GDPR Widget instance
+	Window = SNew(SWindow)
+		.Title(NSLOCTEXT("InvoSKey", "WindowTitle", "Invo Skey"))
+		.ClientSize(FVector2D(400, 120))
+		.SupportsMinimize(true)
+		.SupportsMaximize(true);
+
+	Window->SetContent(SNew(SKeyInputDialog));
+
+	FSlateApplication::Get().AddWindow(Window);
+}
+
 void UInvoFunctions::InvoShowTransferWidget()
 {
 	// Create a InvoTransfer Widget instance
@@ -1609,13 +1624,21 @@ FString UInvoFunctions::EncryptData(const FString& DataToEncrypt, const FString&
 	return EncryptedString;
 }
 
-FString UInvoFunctions::DecryptData(const FString& DataToDecrypt, const FString& KeyString)
+FString UInvoFunctions::DecryptData(const FString& DataToDecrypt, const FString& KeyString,  const FString& KeyStringName)
 {
 
 	FString DecryptedString;
-	FString HexKeyString = TEXT("1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF"); // 64 hex characters
+	FString HexKeyString;// 64 hex characters
 
+	if (KeyString.IsEmpty())
+	{
+		HexKeyString = TEXT("1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF"); // 64 hex characters
 
+	}
+	else
+	{
+		HexKeyString = KeyString;
+	}
 	if (InitializeAESKey(HexKeyString))
 	{
 		// You can now use the Key for encryption and decryption
@@ -1630,10 +1653,10 @@ FString UInvoFunctions::DecryptData(const FString& DataToDecrypt, const FString&
 		FPaths::NormalizeFilename(SecretsNormalizeConfigIniPath);
 		FString AuthCodeKey;
 		TArray<uint8> OutAuthCodeBytes;
-		if (GConfig->GetString(TEXT("/Script/Invo.UInvoFunctions"), TEXT("AUTHCODEKEY"), AuthCodeKey, SecretsNormalizeConfigIniPath))
+		if (GConfig->GetString(TEXT("/Script/Invo.UInvoFunctions"), *KeyStringName, AuthCodeKey, SecretsNormalizeConfigIniPath))
 		{
 
-			UE_LOG(LogTemp, Warning, TEXT("Encryped AuthCode Hex Key: %s"), *AuthCodeKey);
+			UE_LOG(LogTemp, Warning, TEXT("Encryped %s Hex Key: %s"),*KeyStringName, *AuthCodeKey);
 			if (!AuthCodeKey.IsEmpty())
 			{
 
@@ -1648,23 +1671,20 @@ FString UInvoFunctions::DecryptData(const FString& DataToDecrypt, const FString&
 					}
 				}
 				FString UnpaddedData = UnpadStringFromAESBlockSize(DecryptedString); // Removing the padding
-				UE_LOG(LogTemp, Warning, TEXT("Jesus Decrypte AuthCode Key padding removed: %s"), *UnpaddedData);
-				UE_LOG(LogTemp, Warning, TEXT("Jesus Decrypte AuthCode Key: %s"), *DecryptedString);
-				
-
-
+				UE_LOG(LogTemp, Warning, TEXT("Jesus Decrypte %s Key padding removed: %s"), *KeyStringName, *UnpaddedData);
+				UE_LOG(LogTemp, Warning, TEXT("Jesus Decrypte %s  Key: %s"), *KeyStringName, *DecryptedString);
 
 			}
 			else
 			{
-				UE_LOG(LogTemp, Error, TEXT("AuthCode Key is empty: %s"), *AuthCodeKey);
+				UE_LOG(LogTemp, Error, TEXT("%s Key is empty: %s"),*KeyStringName, *AuthCodeKey);
 				return TEXT("AuthCode Key is empty: %s");
 
 			}
 		}
 		else
 		{
-			UE_LOG(LogTemp, Error, TEXT("Failed to get authcode key from config file"));
+			UE_LOG(LogTemp, Error, TEXT("Failed to get %s key from config file"),*KeyStringName);
 			return TEXT("Failed to get authcode key from config file");
 		}
 
@@ -1876,7 +1896,15 @@ void UInvoFunctions::UpdateSecretsIni(FString KeyVariable, FString KeyCodeValue)
 		}
 		else
 		{
-			UE_LOG(LogTemp, Warning, TEXT("Value is not expired. No update performed."));
+			//UE_LOG(LogTemp, Warning, TEXT("Value is not expired. No update performed."));
+			GConfig->SetString(
+				TEXT("/Script/Invo.UInvoFunctions"),
+				*KeyVariable,
+				*KeyCodeValue,
+				SecretsNormalizeConfigIniPath
+			);
+			GConfig->Flush(false, SecretsNormalizeConfigIniPath);
+			UE_LOG(LogTemp, Warning, TEXT("Added New Key: %s with Value: %s"), *KeyVariable, *KeyCodeValue);
 		}
 	}
 	else // If the KeyVariable does not exist, add it
@@ -1925,6 +1953,7 @@ bool UInvoFunctions::IsExpired(const FString& Value, const FString& Value2)
 	return Value == Value2; // Placeholder, replace with your actual code
 }
 
+/*
 bool UInvoFunctions::InitializeAESKey(const FString& HexKeyString)
 {
 	if (HexKeyString.Len() != FAES::FAESKey::KeySize * 2) // Each byte is represented by 2 hex characters
@@ -1952,6 +1981,62 @@ bool UInvoFunctions::InitializeAESKey(const FString& HexKeyString)
 			UE_LOG(LogTemp, Error, TEXT("Failed to convert hex key to bytes."));
 			return false;
 		}
+	}
+
+	return true;
+}
+*/
+
+bool UInvoFunctions::InitializeAESKey(const FString& KeyString)
+{
+	if (KeyString.Len() == FAES::FAESKey::KeySize * 2) // Hex key
+	{
+		for (int32 Index = 0; Index < KeyString.Len(); Index += 2)
+		{
+			TCHAR Char1 = KeyString[Index];
+			TCHAR Char2 = KeyString[Index + 1];
+
+			if (FChar::IsHexDigit(Char1) && FChar::IsHexDigit(Char2))
+			{
+				int32 HighNibble = Char1 <= TEXT('9') ? Char1 - TEXT('0') : Char1 - TEXT('A') + 10;
+				int32 LowNibble = Char2 <= TEXT('9') ? Char2 - TEXT('0') : Char2 - TEXT('A') + 10;
+
+				InvoPrivate::Key.Key[Index / 2] = (HighNibble << 4) + LowNibble;
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("Failed to convert hex key to bytes."));
+				return false;
+			}
+		}
+	}
+	else if (KeyString.Len() == 6) // 6-digit key
+	{
+		for (int32 Index = 0; Index < KeyString.Len(); ++Index)
+		{
+			TCHAR Char = KeyString[Index];
+
+			if (FChar::IsDigit(Char))
+			{
+				InvoPrivate::Key.Key[Index] = Char;
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("Invalid character in 6-digit key."));
+				return false;
+			}
+		}
+
+		// Padding the rest of the key with zeros (or any other value)
+		for (int32 Index = KeyString.Len(); Index < FAES::FAESKey::KeySize; ++Index)
+		{
+			InvoPrivate::Key.Key[Index] = 0;
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Invalid key size."));
+		return false;
 	}
 
 	return true;

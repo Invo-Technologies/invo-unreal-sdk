@@ -78,12 +78,13 @@ private:
     TSharedRef<SWidget> GeneratePriorityComboBoxWidget(TSharedPtr<FString> InItem);
     void OnPriorityChanged(TSharedPtr<FString> NewSelection, ESelectInfo::Type SelectInfo);
     FText GetPriorityComboBoxText() const;
+
     FText GetPinMaskButtonText() const;
+    bool isPinedMasked() const;
 
     void CloseTicketWidget() const;
     bool ValidateResponseContent(const FString& ResponseContent);
 
-    bool isPinedMasked() const;
 
     // Function to create the search bar UI
     TSharedRef<SWidget> CreateSearchBar();
