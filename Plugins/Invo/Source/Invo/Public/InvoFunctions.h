@@ -17,6 +17,7 @@ class SInvoTicketWidget;
 class SInvoTransferWidget;
 class SInvoPurchaseWidget;
 class SInvoTradeWidget;
+class SKeyInputDialog;
 
 // For CallBack Functions 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOnInvoAPICallCompleted, bool, bSuccess);
@@ -321,11 +322,31 @@ public:
 
 	/**
 	* Applications ID or Game_ID
-	* @param OutMaxPacket [int32&] Maximum packet size.
-	* @return [bool] True if valid UNetConnection was found from PlayerController. False otherwise.
 	**/
 	UPROPERTY(config, EditAnywhere, Category = Settings)
-	uint32 Game_ID;
+	FString Game_ID;
+
+	/**
+	* Applications ID or Player_ID
+	**/
+
+	UPROPERTY(config, EditAnywhere, Category = Settings)
+	FString Player_ID;
+
+	/**
+	* Applications ID or PlayerGmail
+	**/
+	UPROPERTY(config, EditAnywhere, Category = Settings)
+	FString PlayerEmail;
+
+	/**
+	* Applications ID or PlayerName
+	**/
+
+	UPROPERTY(config, EditAnywhere, Category = Settings)
+	FString PlayerName;
+
+
 
 
 	/**
@@ -383,7 +404,7 @@ public:
 	static void OpenInvoWebPage(UObject* WorldContextObject, FString Url);
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
-	static void OpenInvoInitWebPage(UObject* WorldContextObject, FString Url);
+	static void OpenInvoInitWebPage();
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
 	static void CloseInvoWebBrowser();
@@ -447,6 +468,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Invo")
 	static void InvoShowTradeWidget();
 
+	// Displays the SKeyInputDialog
+	UFUNCTION(BlueprintCallable, Category = "Invo")
+	static void InvoShowSKeyInputDialog();
+
 
 	// Used to call for any UI Class
 	static void MakeHttpRequest(const FString& Url, const FString& HttpMethod, const FString& Content, TFunction<void(const bool, const FString&)> Callback);
@@ -454,6 +479,51 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Invo", meta = (DisplayName = "Make HTTP Request"))
 	static void MakeHttpRequestBP(const FString& Url, const FString& HttpMethod, const FString& Content, FOnHttpResponseReceived OnResponseReceived);
 
+
+	static FString EncryptData(const FString& DataToEncrypt, const FString& KeyString);
+	static FString DecryptData(const FString& DataToDecrypt, const FString& KeyString, const FString& KeyStringName ="AUTHCODEKEY");
+
+
+	static TArray<uint8> StringToBytes(const FString& String);
+	static FString BytesToString(const TArray<uint8>& Bytes);
+
+
+	static FString PadStringToAESBlockSize(const FString& Data);
+	static FString UnpadStringFromAESBlockSize(const FString& Data);
+
+	static void StringToBytes(const FString& InString, TArray<uint8>& OutBytes);
+	static void BytesToString(const TArray<uint8>& InBytes, FString& OutString);
+	static bool HexToBytes(const FString& HexString, TArray<uint8>& OutBytes);
+
+	static TArray<uint8> PadData(const TArray<uint8>& Data);
+
+	static TArray<uint8> UnpadData(const TArray<uint8>& Data);
+	
+	static void UpdateSecretsIni(FString KeyVarable, FString KeyCodeValue);
+	static bool CheckSecretsIni(FString KeyVariable);
+
+	static bool IsExpired(const FString& Value, const FString& Value2);
+
+	static bool InitializeAESKey(const FString& HexKeyString);
+
+	static void TestEncryptDecrypt(const FString& PlainText, const FString& KeyString, FString& EncryptedHexStringOut);
+
+	static FString BytesToHex(const TArray<uint8>& Bytes);
+
+	//static TArray<uint8> AuthCodePlainTextBytes;
+
+	static void GenerateUniquePlayerID(FString& OutUniquePlayerID);
+
+	UFUNCTION(BlueprintCallable, Category = "Invo")
+	static bool FillBPObjectFromJSON(const FString& JSONString, UObject* BPObject);
+
+
+	bool IsHexDigit(TCHAR Character)
+	{
+		return (Character >= TEXT('0') && Character <= TEXT('9')) ||
+			(Character >= TEXT('a') && Character <= TEXT('f')) ||
+			(Character >= TEXT('A') && Character <= TEXT('F'));
+	}
 
 
 	/**
@@ -484,6 +554,7 @@ private:
 
 	static void SimulateAPICall(FOnInvoAPICallCompleted OnCompleted);
 
+
 	UFUNCTION()
 	static void HandleURLChange(const FString& NewUrl);
 
@@ -509,12 +580,16 @@ private:
 
 	static TSharedPtr<SInvoTradeWidget> InvoTradeWidget;
 
+	static TSharedPtr<SKeyInputDialog> InvoSKeyInputDailogWidget;
+
+
 	// Helper Method for Extracting Code from HTML
 	static FString ExtractCodeFromHTMLSource(const FString& HtmlSource);
 
 	// Helper Method for Extracting Code from a URL
 	static FString ExtractCodeFromUrl(const FString& Url);
 	
+
 	//static TSharedRef<FJsonObject> JsonObjectTest;
 
 protected:

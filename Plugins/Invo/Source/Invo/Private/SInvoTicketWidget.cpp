@@ -114,7 +114,7 @@ void SInvoTicketWidget::SetupWidget()
     // ... other setup code ...
 
     // Bind the callback to the delegate.
-    UInvoHttpManager::GetInstance()->OnHttpRequestCompleted.AddDynamic(this, &SInvoTicketWidget::HandleHttpRequestCompleted);
+   // UInvoHttpManager::GetInstance()->OnHttpRequestCompleted.AddDynamic(this, &SInvoTicketWidget::HandleHttpRequestCompleted);
 }
 
 
@@ -140,21 +140,31 @@ FReply SInvoTicketWidget::OnSubmitClicked()
     // Settings from Invo SDK Feilds
     const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
 
-    JsonObject->SetNumberField("user_id", 4);
-    JsonObject->SetNumberField("player_id", 4);
-    JsonObject->SetNumberField("game_id", Settings->Game_ID);
+    TMap<FString, FString> FormData;
+
+    FormData.Add(TEXT("player_id"), TEXT("2"));
+    FormData.Add(TEXT("game_id"), Settings->Game_ID);
+    FormData.Add(TEXT("subject"), Subject);
+    FormData.Add(TEXT("message_body"), Description);
+    FormData.Add(TEXT("priority"), Priority);
+    FormData.Add(TEXT("status"), TEXT("inbox"));
+
+
+
+    /*
+    JsonObject->SetStringField("player_id", "2");
+    JsonObject->SetStringField("game_id", "17");
     JsonObject->SetStringField("subject", Subject);
     JsonObject->SetStringField("message_body", Description);
     JsonObject->SetStringField("priority", Priority);
     JsonObject->SetStringField("status", "inbox");
+    */
 
-
-    FString Payload;
-    TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Payload);
-    FJsonSerializer::Serialize(JsonObject.ToSharedRef(), Writer);
+    //TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Payload);
+    //FJsonSerializer::Serialize(JsonObject.ToSharedRef(), Writer);
 
     // 3. Directly make the HTTP request without using UInvoFunctions.
-    FString Endpoint = "http://127.0.0.1:3030/create_ticket"; // Replace with your actual server address
+    FString Endpoint = "https://api.dev.ourinvo.com/v1/external/ticket/create"; // Replace with your actual server address
     FString HttpMethod = "POST";
 
     //4. Headers 
@@ -166,7 +176,19 @@ FReply SInvoTicketWidget::OnSubmitClicked()
     HttpRequest->SetURL(Endpoint);
     HttpRequest->SetVerb(HttpMethod);
     HttpRequest->SetHeader(TEXT("User-Agent"), TEXT("X-UnrealEngine-Agent"));
-    HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+    //HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+    HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/x-www-form-urlencoded"));
+
+    FString Payload;
+    for (const auto& Pair : FormData)
+    {
+        if (!Payload.IsEmpty())
+        {
+            Payload.Append(TEXT("&"));
+        }
+        Payload.Append(FString::Printf(TEXT("%s=%s"), *Pair.Key, *Pair.Value));
+    }
+
     HttpRequest->SetContentAsString(Payload);
 
 
@@ -181,11 +203,23 @@ FReply SInvoTicketWidget::OnSubmitClicked()
 
     // ... (Your existing code to gather data and prepare the payload)
 
+    //FString AuthCode = UInvoHttpManager::GetInstance()->GetAuthCode();
+    //Headers.Add(TEXT("auth_code"), AuthCode);
+    //Headers.Add(TEXT("Content-Type"), TEXT("application/text"));
+    //Headers.Add(TEXT("User-Agent"), TEXT("X-UnrealEngine-Agent"));
+
+    for (const auto& Header : Headers)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Headers %s"), *Header.Value);
+
+    }
+    UE_LOG(LogTemp, Warning, TEXT("Payload is  %s"), *Payload);
 
     // Make the HTTP Request
-    UInvoHttpManager::GetInstance()->MakeHttpRequest(Endpoint, HttpMethod, Headers, Payload,
+    UInvoHttpManager::GetInstance()->MakeHttpRequest(Endpoint, HttpMethod, Headers, FormData,
     [this](const bool bSuccess, const FString& ResponseContent)
     {
+
         if (ValidateResponseContent(ResponseContent))
         {
             // Handle the valid response
@@ -216,7 +250,8 @@ FReply SInvoTicketWidget::OnSubmitClicked()
         else
         {
             // Handle the invalid response
-            UE_LOG(LogTemp, Warning, TEXT("Failed to get a valid response."));
+            UE_LOG(LogTemp, Warning, TEXT("Failed to get a valid response with response %s"), *ResponseContent);
+
             FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Failed to get a valid response")));
 
         }
@@ -315,7 +350,7 @@ bool SInvoTicketWidget:: ValidateResponseContent(const FString& ResponseContent)
     }
 
     // 2. Check for Expected Fields
-    if (!JsonObject->HasField("success") || !JsonObject->HasField("message"))
+    if (!JsonObject->HasField("result") || !JsonObject->HasField("message"))
     {
         UE_LOG(LogTemp, Error, TEXT("Mandatory fields are missing."));
         return false;
@@ -323,11 +358,11 @@ bool SInvoTicketWidget:: ValidateResponseContent(const FString& ResponseContent)
 
     // 3. Validate Field Values
     // Example: Ensure "expectedField1" is a string and isn't empty
-    FString expectedField1Value = JsonObject->GetStringField("success");
+    FString expectedField1Value = JsonObject->GetStringField("message");
     if (expectedField1Value.IsEmpty())
     {
         UE_LOG(LogTemp, Error, TEXT("'success' value shouldn't be empty."));
-        return false;
+       // return false;
     }
 
     // Add more validations as needed
