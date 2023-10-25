@@ -43,8 +43,8 @@ public:
     FString GetAuthCode() const;
 
     void CreatePlayerID(const FString& UniquePlayerID);
-    void ParseJSON(const FString& JSONString, TSharedPtr<FJsonObject>& OutDataObject, FString& OutMessage, bool& OutResults);
 
+    void ParseJSON(const FString& JSONString, TSharedPtr<FJsonObject>& OutDataObject, TArray<TSharedPtr<FJsonValue>>& OutDataArray, FString& OutMessage, bool& OutResults);
 
 private:
     static UInvoHttpManager* Instance;

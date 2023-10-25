@@ -210,8 +210,7 @@ void UInvoHttpManager::YourAESFunction()
     // Your encryption and decryption code here...
 }
 
-
-void UInvoHttpManager::ParseJSON(const FString& JSONString, TSharedPtr<FJsonObject>& OutDataObject, FString& OutMessage, bool& OutResults)
+void UInvoHttpManager::ParseJSON(const FString& JSONString, TSharedPtr<FJsonObject>& OutDataObject, TArray<TSharedPtr<FJsonValue>>& OutDataArray, FString& OutMessage, bool& OutResults)
 {
     TSharedPtr<FJsonObject> JsonObject;
     TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(JSONString);
@@ -223,19 +222,31 @@ void UInvoHttpManager::ParseJSON(const FString& JSONString, TSharedPtr<FJsonObje
         OutMessage = Message;
         OutResults = Result;
 
-        TSharedPtr<FJsonObject> DataObject = JsonObject->GetObjectField("data");
-        if (DataObject.IsValid())
+        if (JsonObject->HasTypedField<EJson::Object>("data"))
         {
-            OutDataObject = DataObject;
-            //int32 PlayerId = DataObject->GetIntegerField("player_id");
-            //int32 GameId = DataObject->GetIntegerField("game_id");
-            //FString PlayerName = DataObject->GetStringField("player_name");
 
-            // Now you can use these values as needed
-            //UE_LOG(LogTemp, Warning, TEXT("Message: %s"), *Message);
-            //UE_LOG(LogTemp, Warning, TEXT("Player ID: %d"), PlayerId);
-            //UE_LOG(LogTemp, Warning, TEXT("Game ID: %d"), GameId);
-            //UE_LOG(LogTemp, Warning, TEXT("Player Name: %s"), *PlayerName);
+            TSharedPtr<FJsonObject> DataObject = JsonObject->GetObjectField("data");
+            if (DataObject.IsValid())
+            {
+                UE_LOG(LogTemp, Warning, TEXT("Data json is detected %s"), *JSONString);
+                OutDataObject = DataObject;
+            }
+        }
+        else if (JsonObject->HasTypedField<EJson::Array>("data"))
+        {
+
+            TArray<TSharedPtr<FJsonValue>> DataObjectArray = JsonObject->GetArrayField("data");
+            if (!DataObjectArray.IsEmpty())
+            {
+             
+
+                OutDataArray = DataObjectArray;
+               
+            }
+        }
+        else
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Data is neither an object nor an array"));
         }
     }
     else
@@ -322,9 +333,10 @@ void UInvoHttpManager::CreatePlayerID(const FString& UniquePlayerID)
                 	UE_LOG(LogTemp, Warning, TEXT("HTTP Response: %s and is bSucess %s"), *ResponseContent, *StringbSuccess);
                 
                     TSharedPtr<FJsonObject> OutDataObject;
+                    TArray<TSharedPtr<FJsonValue>> OutDataArray;
                     FString OutMessage;
                     bool OutResults;
-                    ParseJSON(ResponseContent, OutDataObject, OutMessage, OutResults);
+                    ParseJSON(ResponseContent, OutDataObject,OutDataArray, OutMessage, OutResults);
                     int32 PlayerId = OutDataObject->GetIntegerField("player_id");
                     int32 GameId = OutDataObject->GetIntegerField("game_id");
                     FString PlayerName = OutDataObject->GetStringField("player_name");
