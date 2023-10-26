@@ -534,6 +534,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Invo")
 	static TMap<FString, FString> InvoConvertJSONStringToMap(const FString& JSONString);
 
+	// Gets The KeyValue for Keys in the Secrete ini File
+	static FString GetSecretsIniKeyValue(const FString& KeyVariable);
+
+
 private:
 
 	static void MakeHttpRequest(const FString& Url, const FString& Method, FString& JsonData, TFunction<void(TSharedPtr<FJsonObject>)> Callback);

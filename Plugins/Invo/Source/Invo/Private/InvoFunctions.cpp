@@ -357,19 +357,35 @@ void UInvoFunctions::OpenWebView(const FString& Url)
 				FString NewUrl = NewUrlText.ToString();
 				// Handle URL changes here
 				UE_LOG(LogTemp, Warning, TEXT("Testing %s"), *NewUrl);
+				
+				if (!CheckSecretsIni("AuthCodeKey"))
+				{
+					FString AuthCode = ExtractCodeFromUrl(NewUrl);
+					UInvoHttpManager::GetInstance()->SetAuthCode(AuthCode);
 
-				FString AuthCode = ExtractCodeFromUrl(NewUrl);
-				UInvoHttpManager::GetInstance()->SetAuthCode(AuthCode);
+					//FString KeyString = TEXT("0123456789abcdef0123456789abcdef");
+					FString HexKeyString = TEXT("1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF"); // 64 hex characters
 
-				//FString KeyString = TEXT("0123456789abcdef0123456789abcdef");
-				FString HexKeyString = TEXT("1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF"); // 64 hex characters
+					FString EncryptDataAuthCode = EncryptData(AuthCode, HexKeyString);
+					UpdateSecretsIni("AuthCodeKey", EncryptDataAuthCode);
 
-				FString EncryptDataAuthCode = EncryptData(AuthCode, HexKeyString);
-				UpdateSecretsIni("AuthCodeKey", EncryptDataAuthCode);
+					UE_LOG(LogTemp, Warning, TEXT("AuthCode is %s"), *AuthCode);
+				}
+
+				
+
+				if (!CheckSecretsIni("PlayerID"))
+				{
+					// Create Player ID 
+					FString UniqueIDStr;
+					GenerateUniquePlayerID(UniqueIDStr);
+					FString Message = FString::Printf(TEXT("OnTransferClicked with ID %s"), *UniqueIDStr);
+					GEngine->AddOnScreenDebugMessage(1, 3.0, FColor::Green, Message);
+					UE_LOG(LogTemp, Warning, TEXT("This log message is from file %s on line %d"), TEXT(__FILE__), __LINE__);
+
+					UInvoHttpManager::GetInstance()->CreatePlayerID(UniqueIDStr);
+				}
 			
-
-				UE_LOG(LogTemp, Warning, TEXT("AuthCode is %s"), *AuthCode);
-				//UE_LOG(LogTemp, Warning, TEXT("DecryptedAuthCode is %s"), *DecryptedAuthCodeByteToString);
 
 				HandleURLChange(NewUrl);
 				
@@ -1940,6 +1956,28 @@ bool UInvoFunctions::CheckSecretsIni(FString KeyVariable)
 		return false;
 	}
 	return true;
+}
+
+FString UInvoFunctions::GetSecretsIniKeyValue(const FString& KeyVariable)
+{
+	// Specify the path to the Secrets.ini file
+	FString SecretsIniFilePath = FPaths::ProjectConfigDir() + TEXT("Secrets.ini");
+	FString SecretsNormalizeConfigIniPath = FConfigCacheIni::NormalizeConfigIniPath(SecretsIniFilePath);
+	FPaths::NormalizeFilename(SecretsNormalizeConfigIniPath);
+
+	// Get the existing value
+	FString ExistingValue;
+	if (GConfig->GetString(TEXT("/Script/Invo.UInvoFunctions"), *KeyVariable, ExistingValue, SecretsNormalizeConfigIniPath))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Existing Value: %s"), *ExistingValue);
+		return ExistingValue;
+	}
+	else // If the KeyVariable does not exist, add it
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Existing Value: %s does not exsist"), *ExistingValue);
+		return ExistingValue;
+	}
+	return ExistingValue;
 }
 
 

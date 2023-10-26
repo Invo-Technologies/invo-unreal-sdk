@@ -176,6 +176,7 @@ void SInvoTransferWidget::Construct(const FArguments& InArgs)
                                             SAssignNew(PinTextBox, SEditableTextBox)
                                                 .HintText(FText::FromString("Enter Pin"))
                                                 .MinDesiredWidth(200.0f) // This sets the minimum width
+                                                .IsPassword(true)
 
 
                                         ]
@@ -248,22 +249,113 @@ void SInvoTransferWidget::SetupWidget()
 
 FReply SInvoTransferWidget::OnTransferClicked()
 {
-    if (!UInvoFunctions::CheckSecretsIni("PlayerID"))
+    if (UInvoFunctions::CheckSecretsIni("PlayerID"))
     {
-        FString UniqueIDStr;
-        UInvoFunctions::GenerateUniquePlayerID(UniqueIDStr);
-        FString Message = FString::Printf(TEXT("OnTransferClicked with ID %s"), *UniqueIDStr);
-        GEngine->AddOnScreenDebugMessage(1, 3.0, FColor::Green, Message);
-        UE_LOG(LogTemp, Warning, TEXT("This log message is from file %s on line %d"), TEXT(__FILE__), __LINE__);
+    
+        const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
+        TMap<FString, FString> FormData;
+        
+        FString PlayerID = UInvoFunctions::GetSecretsIniKeyValue("PlayerID");
+        FormData.Add(TEXT("from_player_id"), PlayerID);
+        FormData.Add(TEXT("from_game_id"), Settings->Game_ID);
+        FormData.Add(TEXT("to_player_id"), TargetPlayerIDTextBox->GetText().ToString());
+        FormData.Add(TEXT("to_game_id"), FString::FromInt(CurrentGame->GameID));
+        FormData.Add(TEXT("amount"), DefaultCurrencyAmountTextBox->GetText().ToString());
+        FormData.Add(TEXT("s_key"), PinTextBox->GetText().ToString());
+        
 
-        UInvoHttpManager::GetInstance()->CreatePlayerID(UniqueIDStr);
-        CloseTicketWidget();
+        // 3. Directly make the HTTP request without using UInvoFunctions.
+        FString Endpoint = "https://api.dev.ourinvo.com/v1/external/player/transfer"; // Replace with your actual server address
+        FString HttpMethod = "POST";
+
+        //4. Headers 
+        TMap<FString, FString> Headers;
+
+        // Create HTTP Request
+        TSharedRef<IHttpRequest, ESPMode::ThreadSafe> HttpRequest = FHttpModule::Get().CreateRequest();
+
+        HttpRequest->SetURL(Endpoint);
+        HttpRequest->SetVerb(HttpMethod);
+        HttpRequest->SetHeader(TEXT("User-Agent"), TEXT("X-UnrealEngine-Agent"));
+        //HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+        HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/x-www-form-urlencoded"));
+
+        FString Payload;
+        for (const auto& Pair : FormData)
+        {
+            if (!Payload.IsEmpty())
+            {
+                Payload.Append(TEXT("&"));
+            }
+            Payload.Append(FString::Printf(TEXT("%s=%s"), *Pair.Key, *Pair.Value));
+        }
+
+        HttpRequest->SetContentAsString(Payload);
+
+
+        // Alert for empty fields
+        if (TargetPlayerIDTextBox->GetText().IsEmpty() || PinTextBox->GetText().IsEmpty())
+        {
+            // Show a Windows alert box
+            FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("TargetPlayerID or Pin cannot be empty.")));
+            return FReply::Unhandled();  // Do not proceed further
+        }
+
+
+        for (const auto& Header : Headers)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Headers %s"), *Header.Value);
+
+        }
+        UE_LOG(LogTemp, Warning, TEXT("Payload is  %s"), *Payload);
+
+        // Make the HTTP Request
+        UInvoHttpManager::GetInstance()->MakeHttpRequest(Endpoint, HttpMethod, Headers, FormData,
+            [this](const bool bSuccess, const FString& ResponseContent)
+            {
+
+                if (ValidateResponseContent(ResponseContent))
+                {
+                    // Handle the valid response
+                    // Log the response's content as a string.
+                    FString StringbSuccess = bSuccess ? "True" : "False";
+                    UE_LOG(LogTemp, Warning, TEXT("HTTP Response: %s and is bSucess %s"), *ResponseContent, *StringbSuccess);
+                    FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Transfer Succeefully Completed.")));
+
+                    UWorld* World = GWorld->GetWorld();
+
+
+                    // Restore player input and cursor mode
+                    APlayerController* PlayerController = World->GetFirstPlayerController();
+
+                    if (PlayerController)
+                    {
+                        // Set the input mode back to the game
+                        FInputModeGameOnly InputMode;
+                        PlayerController->SetInputMode(InputMode);
+
+                        // Lock the mouse cursor to the center of the screen
+                        PlayerController->bShowMouseCursor = false;
+                        PlayerController->bEnableClickEvents = false;
+                        PlayerController->bEnableMouseOverEvents = false;
+                    }
+                }
+                else
+                {
+                    // Handle the invalid response
+                    UE_LOG(LogTemp, Warning, TEXT("Failed to get a valid response with response %s"), *ResponseContent);
+
+                    FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Failed to get a valid response")));
+
+                }
+            });
+
+        //CloseTicketWidget();
     }
     else
     {
         UE_LOG(LogTemp, Warning, TEXT("PlayerID already exsist. %s on line %d"), TEXT(__FILE__), __LINE__);
         UInvoFunctions::InvoShowPurchaseWidget();
-        CloseTicketWidget();
 
     }
  
@@ -319,7 +411,7 @@ bool SInvoTransferWidget::ValidateResponseContent(const FString& ResponseContent
     }
 
     // 2. Check for Expected Fields
-    if (!JsonObject->HasField("success") || !JsonObject->HasField("message"))
+    if (!JsonObject->HasField("message") || !JsonObject->HasField("result"))
     {
         UE_LOG(LogTemp, Error, TEXT("Mandatory fields are missing."));
         return false;
@@ -327,7 +419,7 @@ bool SInvoTransferWidget::ValidateResponseContent(const FString& ResponseContent
 
     // 3. Validate Field Values
     // Example: Ensure "expectedField1" is a string and isn't empty
-    FString expectedField1Value = JsonObject->GetStringField("success");
+    FString expectedField1Value = JsonObject->GetStringField("message");
     if (expectedField1Value.IsEmpty())
     {
         UE_LOG(LogTemp, Error, TEXT("'success' value shouldn't be empty."));

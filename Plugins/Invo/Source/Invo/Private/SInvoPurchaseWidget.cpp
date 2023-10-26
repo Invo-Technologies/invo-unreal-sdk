@@ -102,6 +102,19 @@ FReply SInvoPurchaseWidget::OnPurchaseClicked()
 {
   
     UInvoFunctions::InvoShowSKeyInputDialog();
+    if (!UInvoFunctions::CheckSecretsIni("PlayerID"))
+    {
+        FString UniqueIDStr;
+        UInvoFunctions::GenerateUniquePlayerID(UniqueIDStr);
+        FString Message = FString::Printf(TEXT("OnTransferClicked with ID %s"), *UniqueIDStr);
+        GEngine->AddOnScreenDebugMessage(1, 3.0, FColor::Green, Message);
+        UE_LOG(LogTemp, Warning, TEXT("This log message is from file %s on line %d"), TEXT(__FILE__), __LINE__);
+
+        UInvoHttpManager::GetInstance()->CreatePlayerID(UniqueIDStr);
+        UInvoFunctions::InvoShowSKeyInputDialog();
+
+    }
+
 
     const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
 

@@ -274,12 +274,17 @@ void UInvoHttpManager::CreatePlayerID(const FString& UniquePlayerID)
         if (!Settings->Player_ID.IsEmpty())
         {
             UE_LOG(LogTemp, Warning, TEXT("Player %s is already registered"), *Settings->Player_ID);
-            return;
         }
 
         // Settings from Invo SDK Feilds
 
         TMap<FString, FString> FormData;
+
+        if (Settings->Game_ID.IsEmpty())
+        {
+            FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Please Enter Your GameID in the Invo Plugins Game ID Feild")));
+            return;
+        }
 
         FormData.Add(TEXT("game_id"), Settings->Game_ID);
         FormData.Add(TEXT("player_name"), UniquePlayerID);
@@ -345,7 +350,6 @@ void UInvoHttpManager::CreatePlayerID(const FString& UniquePlayerID)
                     {
                         UE_LOG(LogTemp, Warning, TEXT("PlayerId %s is created "), *PlayerIDString);
                         UInvoFunctions::UpdateSecretsIni("PlayerID", PlayerIDString);
-                        UInvoFunctions::InvoShowPurchaseWidget();
 
                     }
                     else
@@ -359,7 +363,7 @@ void UInvoHttpManager::CreatePlayerID(const FString& UniquePlayerID)
                 	// Handle the invalid response
                 	UE_LOG(LogTemp, Warning, TEXT("Failed to get a valid response with response %s"), *ResponseContent);
                 
-                	FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Failed to get a valid response")));
+                	    FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Failed to get a valid response")));
                 
                 }
             });
