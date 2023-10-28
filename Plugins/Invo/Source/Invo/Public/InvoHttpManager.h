@@ -20,7 +20,7 @@ class INVO_API UInvoHttpManager : public UObject
     GENERATED_BODY()
 
 public:
-    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Invo", meta = (DisplayName = "Get Invo HTTP Manager"))
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Invo", meta = (DisplayName = "Get Invo Manager"))
     static UInvoHttpManager* GetInstance();
 
 
@@ -45,6 +45,12 @@ public:
     void CreatePlayerID(const FString& UniquePlayerID);
 
     void ParseJSON(const FString& JSONString, TSharedPtr<FJsonObject>& OutDataObject, TArray<TSharedPtr<FJsonValue>>& OutDataArray, FString& OutMessage, bool& OutResults);
+   
+    UFUNCTION(BlueprintCallable, Category = "Invo")
+    static void InvoFetchCurrencyBalanceBP();
+
+    bool ValidateHttpManagerResponseContent(const FString& ResponseContent);
+
 
 private:
     static UInvoHttpManager* Instance;
@@ -54,7 +60,6 @@ private:
     FString AuthCode;
 
     void YourAESFunction();
-    bool ValidateHttpManagerResponseContent(const FString& ResponseContent);
 
   
     //FHttpResponseReceived ResponseContentDelegate;

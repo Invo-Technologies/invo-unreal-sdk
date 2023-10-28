@@ -419,6 +419,9 @@ public:
 	static void GetInvoFunctionThree(FOnInvoAPICallCompleted OnCompleted);
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
+	static void GetInvoFunctionFour(FOnCurrencyAmountFetchedBP OnCompleted);
+
+	UFUNCTION(BlueprintCallable, Category = "Invo")
 	static void InvoAPICallFunction(FOnInvoAPICallCompleted OnCompleted);
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
@@ -439,8 +442,14 @@ public:
 
 	static void GetInvoCurrencyAmountForPlayer(int64 GameID, int64 PlayerID, TFunction<void(const FString&)> OnCurrencyAmountFetched);
 
+	static void GetInvoCurrencyAmountForPlayer(TFunction<void(const FString&)> OnCurrencyAmountFetched);
+
+
 	UFUNCTION(BlueprintCallable, Category = "Invo", meta = (DisplayName = "Get Currency Amount For Player in BP"))
 	static void GetInvoCurrencyAmountForPlayerBP(int64 GameID, int64 PlayerID, const FOnCurrencyAmountFetchedBP& OnCurrencyAmountFetchedBP);
+
+	UFUNCTION(BlueprintCallable, Category = "Invo", meta = (DisplayName = "Get Currency Amount For Player in BP"))
+	static void GetInvoCurrencyAmountForPlayerBP2(const FOnCurrencyAmountFetchedBP& OnCurrencyAmountFetchedBP);
 
 	static bool bIsTransferCompleted;
 
@@ -471,7 +480,7 @@ public:
 	// Displays the SKeyInputDialog
 	UFUNCTION(BlueprintCallable, Category = "Invo")
 	static void InvoShowSKeyInputDialog();
-
+	
 
 	// Used to call for any UI Class
 	static void MakeHttpRequest(const FString& Url, const FString& HttpMethod, const FString& Content, TFunction<void(const bool, const FString&)> Callback);
@@ -537,10 +546,18 @@ public:
 	// Gets The KeyValue for Keys in the Secrete ini File
 	static FString GetSecretsIniKeyValue(const FString& KeyVariable);
 
+	UFUNCTION(BlueprintCallable, Category = "InvoFunctions")
+	static void HandleHttpResponse(bool bWasSuccessful, const FString& ResponseContent);
 
+	void InvoGetCurrentBalance();
+
+	
 private:
 
 	static void MakeHttpRequest(const FString& Url, const FString& Method, FString& JsonData, TFunction<void(TSharedPtr<FJsonObject>)> Callback);
+
+	static void MakeHttpRequest(const FString& URL, const FString& HttpMethod, const TMap<FString, FString>& Headers, const TMap<FString, FString>& FormData, TFunction<void(TSharedPtr<FJsonObject>)> Callback);
+
 
 	static class UNetConnection* Internal_GetNetConnection(const UObject* WorldContextObject);
 
@@ -555,6 +572,8 @@ private:
 	static void InvoAPIJsonReturnCall(const FString& City, FString& JsonData, TFunction<void(TSharedPtr<FJsonObject>)> Callback);
 
 	static void InvoAPIJsonReturn(const FString& EndPoint, FString& JsonData, TFunction<void(TSharedPtr<FJsonObject>)> Callback);
+
+	static void InvoAPIJsonReturnCall(const FString& URL, const FString& HttpMethod, const TMap<FString, FString>& Headers, const TMap<FString, FString>& FormData, TFunction<void(TSharedPtr<FJsonObject>)> Callback);
 
 	static void SimulateAPICall(FOnInvoAPICallCompleted OnCompleted);
 
@@ -593,6 +612,7 @@ private:
 	// Helper Method for Extracting Code from a URL
 	static FString ExtractCodeFromUrl(const FString& Url);
 	
+	static FString CurrentBalance;
 
 	//static TSharedRef<FJsonObject> JsonObjectTest;
 

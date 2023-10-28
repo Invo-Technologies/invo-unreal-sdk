@@ -26,12 +26,19 @@ UInvoHttpManager* UInvoHttpManager::Instance = nullptr;
 //FHttpResponseReceived UInvoFunctions::OnHttpResponseReceived;
 
 
+//UInvoHttpManager::FOnHttpResponseReceived UInvoHttpManager::OnHttpResponseReceived2;
+//UInvoFunctions::FOnBalanceUpdated UInvoFunctions::OnBalanceUpdated;
+
 UInvoHttpManager* UInvoHttpManager::GetInstance()
 {
     if (!Instance)
     {
         Instance = NewObject<UInvoHttpManager>();
         Instance->AddToRoot();
+        //UInvoHttpManager::OnHttpResponseReceived2.AddStatic(&UInvoFunctions::HandleHttpResponse);
+        //UInvoFunctions::OnBalanceUpdated.AddStatic(&UInvoFunctions::HandleHttpResponse);
+
+       
     }
     return Instance;
 }
@@ -132,6 +139,7 @@ void UInvoHttpManager::MakeHttpRequest(const FString& URL, const FString& HttpMe
                 Callback(bWasSuccessful, Response->GetContentAsString());
                 HttpRequestCompleted(Request, Response, bWasSuccessful);
             }
+
             else
             {
                 UE_LOG(LogTemp, Warning, TEXT("No Call back "));
@@ -166,11 +174,16 @@ void UInvoHttpManager::HttpRequestCompleted(FHttpRequestPtr Request, FHttpRespon
     if (EHttpResponseCodes::IsOk(Response->GetResponseCode()))
     {
         // The request was successful and the response is OK
-        OnHttpResponseReceived.Broadcast(true, Response->GetContentAsString());
+       // OnHttpResponseReceived.Broadcast(true, Response->GetContentAsString());
+        
+
+        //OnHttpResponseReceived2.Broadcast(bWasSuccessful, Response.IsValid() ? Response->GetContentAsString() : TEXT("Invalid Response"));
+
+        //UInvoFunctions::OnHttpResponseReceived3.Broadcast(bWasSuccessful, Response.IsValid() ? Response->GetContentAsString() : TEXT("Invalid Response"));
+
         //InvoOnHttpRequestCompletedEvent.Broadcast(bWasSuccessful, Response.IsValid() ? Response->GetContentAsString() : TEXT("Success Response"));
       
-       OnHttpRequestCompleted.Broadcast(bWasSuccessful, Response.IsValid() ? Response->GetContentAsString() : TEXT("Invalid Response"));
-
+        OnHttpRequestCompleted.Broadcast(bWasSuccessful, Response.IsValid() ? Response->GetContentAsString() : TEXT("Invalid Response"));
         
 
         return;  // Exit the function as the successful response has been handled
@@ -409,3 +422,102 @@ bool UInvoHttpManager::ValidateHttpManagerResponseContent(const FString& Respons
 
     return true;  // If all checks pass
 }
+
+void UInvoHttpManager::InvoFetchCurrencyBalanceBP()
+{
+    FString CurrencyBalance;
+    const UInvoFunctions* SettingsBalance = GetDefault<UInvoFunctions>();
+    if (SettingsBalance->Game_ID.IsEmpty())
+    {
+        GEngine->AddOnScreenDebugMessage(-1, 5.0, FColor::Yellow, TEXT("Need to Set GameID in Invo Plugin Settings "));
+
+    }
+    else
+    {
+        if (UInvoFunctions::CheckSecretsIni("PlayerID"))
+        {
+
+            const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
+            TMap<FString, FString> FormData;
+
+            FString PlayerID = UInvoFunctions::GetSecretsIniKeyValue("PlayerID");
+            FormData.Add(TEXT("player_id"), PlayerID);
+            FormData.Add(TEXT("game_id"), Settings->Game_ID);
+
+
+            // 3. Directly make the HTTP request without using UInvoFunctions.
+            FString Endpoint = "https://api.dev.ourinvo.com/v1/external/player/currentbalance"; // Replace with your actual server address
+            FString HttpMethod = "POST";
+
+            //4. Headers 
+            TMap<FString, FString> Headers;
+
+            // Create HTTP Request
+            TSharedRef<IHttpRequest, ESPMode::ThreadSafe> HttpRequest = FHttpModule::Get().CreateRequest();
+
+            HttpRequest->SetURL(Endpoint);
+            HttpRequest->SetVerb(HttpMethod);
+            HttpRequest->SetHeader(TEXT("User-Agent"), TEXT("X-UnrealEngine-Agent"));
+            //HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+            HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/x-www-form-urlencoded"));
+
+            FString Payload;
+            for (const auto& Pair : FormData)
+            {
+                if (!Payload.IsEmpty())
+                {
+                    Payload.Append(TEXT("&"));
+                }
+                Payload.Append(FString::Printf(TEXT("%s=%s"), *Pair.Key, *Pair.Value));
+            }
+
+            HttpRequest->SetContentAsString(Payload);
+
+
+
+            for (const auto& Header : Headers)
+            {
+                UE_LOG(LogTemp, Warning, TEXT("Headers %s"), *Header.Value);
+
+            }
+            UE_LOG(LogTemp, Warning, TEXT("Payload is  %s"), *Payload);
+
+            // Make the HTTP Request
+            UInvoHttpManager::GetInstance()->MakeHttpRequest(Endpoint, HttpMethod, Headers, FormData,
+                [&](const bool bSuccess, const FString& ResponseContent)
+                {
+
+                    if (UInvoHttpManager::GetInstance()->ValidateHttpManagerResponseContent(ResponseContent))
+                    {
+                        // Handle the valid response
+                        // Log the response's content as a string.
+                        FString StringbSuccess = bSuccess ? "True" : "False";
+                        UE_LOG(LogTemp, Warning, TEXT("HTTP Response: %s and is bSucess %s"), *ResponseContent, *StringbSuccess);
+
+
+                        TSharedPtr<FJsonObject> OutDataObject;
+                        TArray<TSharedPtr<FJsonValue>> OutDataArray;
+                        FString OutMessage;
+                        bool OutResults;
+                        UInvoHttpManager::GetInstance()->ParseJSON(ResponseContent, OutDataObject, OutDataArray, OutMessage, OutResults);
+                        FString Amount = OutDataObject->GetStringField("current_balance");
+                        UInvoHttpManager::GetInstance()->OnHttpResponseReceived.Broadcast(true, Amount);
+                        //OutBalance = Amount;
+                        UE_LOG(LogTemp, Warning, TEXT("Currenace balance %s"), *Amount);
+                        
+
+                    }
+                    else
+                    {
+                        // Handle the invalid response
+                        UE_LOG(LogTemp, Warning, TEXT("Failed to get a valid response with response %s"), *ResponseContent);
+
+                        FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Failed to get a valid response")));
+
+                    }
+                });
+        }
+
+    }
+}
+

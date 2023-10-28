@@ -9,6 +9,8 @@
 #include "Engine/NetConnection.h"
 #include "Engine/GameViewportClient.h"
 #include "GameFramework/WorldSettings.h"
+#include "Runtime/Core/Public/Misc/MessageDialog.h"
+
 #include "Misc/AES.h"
 #include "Misc/Base64.h"
 
@@ -109,6 +111,8 @@ TSharedRef<SWindow> UInvoFunctions::Window = SNew(SWindow);
 TSharedPtr<SInvoTicketWidget> UInvoFunctions::InvoTicketWidget;
 TSharedPtr<SInvoTransferWidget> UInvoFunctions::InvoTransferWidget;
 
+FString UInvoFunctions::CurrentBalance = TEXT(""); // Initialize the static variable
+//UInvoFunctions::FOnBalanceUpdated UInvoFunctions::OnBalanceUpdated;
 
 bool UInvoFunctions::bIsTransferCompleted = false;
 
@@ -823,6 +827,140 @@ bool UInvoFunctions::CloseWebBrowser(const FString& Message)
 	return true;
 }
 
+void UInvoFunctions::MakeHttpRequest(const FString& URL, const FString& HttpMethod, const TMap<FString, FString>& Headers, const TMap<FString, FString>& FormData, TFunction<void(TSharedPtr<FJsonObject>)> Callback)
+{
+	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
+
+
+	// Set HTTP method (GET, POST, PUT, etc.)
+	Request->SetVerb(HttpMethod);
+
+	// Set the request URL
+	Request->SetURL(URL);
+
+	if (Headers.IsEmpty())
+	{
+		Request->SetHeader(TEXT("User-Agent"), TEXT("X-UnrealEngine-Agent"));
+		Request->SetHeader(TEXT("Content-Type"), TEXT("application/x-www-form-urlencoded"));
+
+	}
+	else
+
+	{
+		for (const auto& Header : Headers)
+		{
+			Request->SetHeader(Header.Key, Header.Value);
+		}
+	}
+	// Set headers, if any
+
+	FString SecretsIniFilePath = FPaths::ProjectConfigDir() + TEXT("Secrets.ini");
+	FString SecretsNormalizeConfigIniPath = FConfigCacheIni::NormalizeConfigIniPath(SecretsIniFilePath);
+
+	FPaths::NormalizeFilename(SecretsNormalizeConfigIniPath);
+	FString AuthCodeKey;
+	if (GConfig->GetString(TEXT("/Script/Invo.UInvoFunctions"), TEXT("AUTHCODEKEY"), AuthCodeKey, SecretsNormalizeConfigIniPath))
+	{
+		FString HexKeyString = TEXT("1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF"); // 64 hex characters
+
+		FString DecryptDataAuthCode = UInvoFunctions::DecryptData(AuthCodeKey, HexKeyString);
+		UE_LOG(LogTemp, Warning, TEXT("Decrypted AuthCode Key: %s"), *DecryptDataAuthCode);
+		if (!DecryptDataAuthCode.IsEmpty())
+		{
+
+			Request->SetHeader(TEXT("auth_code"), DecryptDataAuthCode);
+
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("AuthCode Key is empty: %s"), *AuthCodeKey);
+			FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Need to Initiliaze Invo SDK first.")));
+
+			UInvoFunctions::OpenInvoInitWebPage();
+			return;
+
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("Failed to get authcode key from config file"));
+		FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Need to Initiliaze Invo SDK first.")));
+
+		UInvoFunctions::OpenInvoInitWebPage();
+		return;
+	}
+
+	// Format the payload as x-www-form-urlencoded
+	FString Payload;
+	for (const auto& Pair : FormData)
+	{
+		if (!Payload.IsEmpty())
+		{
+			Payload.Append(TEXT("&"));
+		}
+		Payload.Append(FString::Printf(TEXT("%s=%s"), *Pair.Key, *Pair.Value));
+	}
+
+	Request->SetContentAsString(Payload);
+
+	// Bind the request's completion delegate
+	//Request->OnProcessRequestComplete().BindUObject(this, &UInvoHttpManager::HttpRequestCompleted);
+	Request->OnProcessRequestComplete().BindLambda([Callback](FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful)
+		{
+			if(bWasSuccessful && Response.IsValid())
+
+				// Check the response code
+				if (EHttpResponseCodes::IsOk(Response->GetResponseCode()))
+				{
+					// Deserialize the response into a JSON object
+					FString ResponseString = Response->GetContentAsString();
+					TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseString);
+					TSharedPtr<FJsonValue> JsonValue;
+					if (FJsonSerializer::Deserialize(Reader, JsonValue))
+					{
+						if (JsonValue->Type == EJson::Object)
+						{
+							// Handle JSON object
+							TSharedPtr<FJsonObject> JsonObject = JsonValue->AsObject();
+							Callback(JsonObject);
+						}
+						else if (JsonValue->Type == EJson::Array)
+						{
+							// Handle JSON array
+							TArray<TSharedPtr<FJsonValue>> JsonArray = JsonValue->AsArray();
+							for (const TSharedPtr<FJsonValue>& Item : JsonArray)
+							{
+								if (Item->Type == EJson::Object)
+								{
+									TSharedPtr<FJsonObject> JsonObject = Item->AsObject();
+									Callback(JsonObject);
+								}
+							}
+						}
+					}
+					else
+					{
+						// JSON parsing failed
+						UE_LOG(LogTemp, Error, TEXT("Failed to parse JSON response"));
+					}
+				}
+				else
+				{
+					// Unsuccessful API call
+					UE_LOG(LogTemp, Error, TEXT("API call failed with status code: %d"), Response->GetResponseCode());
+				}
+
+			else
+
+				// Network-related errors or other issues
+				UE_LOG(LogTemp, Error, TEXT("HTTP request failed"));
+
+		});
+
+	// Execute the request
+	Request->ProcessRequest();
+
+}
 
 void UInvoFunctions::MakeHttpRequest(const FString& Url, const FString& Method, FString& JsonData /*= TEXT("")*/, TFunction<void(TSharedPtr<FJsonObject>)> Callback)
 {
@@ -963,7 +1101,10 @@ void UInvoFunctions::MakeHttpRequestBP(const FString& Url, const FString& HttpMe
 	// ... (send the request)
 }
 
+void UInvoFunctions::InvoAPIJsonReturnCall(const FString& URL, const FString& HttpMethod, const TMap<FString, FString>& Headers, const TMap<FString, FString>& FormData, TFunction<void(TSharedPtr<FJsonObject>)> Callback)
+{
 
+}
 void UInvoFunctions::InvoAPIJsonReturnCall(const FString& City, FString& JsonData, TFunction<void(TSharedPtr<FJsonObject>)> Callback)
 {
 	FJsonObject JsonRespObject;
@@ -1096,6 +1237,40 @@ void UInvoFunctions::GetInvoFunctionThree(FOnInvoAPICallCompleted OnCompleted)
 					GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Green, Message);
 					bool bSuccess = true;
 					OnCompleted.ExecuteIfBound(bSuccess);
+
+				}
+			}
+
+
+		});
+
+}
+
+void UInvoFunctions::GetInvoFunctionFour(FOnCurrencyAmountFetchedBP OnCompleted)
+{
+	FString JsonData = TEXT("");
+	InvoAPIJsonReturnCall(TEXT("London"), JsonData, [OnCompleted](TSharedPtr<FJsonObject> JsonObject)
+		{
+			// Do something with JsonObject
+				// This will be called when the HTTP request completes
+
+			TArray<TSharedPtr<FJsonValue>> WeatherData = JsonObject->GetArrayField("weather");
+
+			for (int32 Index = 0; Index != WeatherData.Num(); ++Index)
+			{
+				// Get the weather object
+				TSharedPtr<FJsonObject> WeatherObject = WeatherData[Index]->AsObject();
+
+
+				if (WeatherObject.IsValid() && JsonObject->HasField("name"))
+				{
+					FString Description = WeatherObject->GetStringField("description");
+					FString CityName = JsonObject->GetStringField("name");
+					UE_LOG(LogTemp, Warning, TEXT("Weather description: %s in %s"), *Description, *CityName);
+					FString Message = FString::Printf(TEXT("Weather Descripions is %s in %s"), *Description, *CityName);
+					GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Green, Message);
+					bool bSuccess = true;
+					OnCompleted.ExecuteIfBound("100");
 
 				}
 			}
@@ -1353,9 +1528,98 @@ void UInvoFunctions::GetInvoCurrencyAmountForPlayer(int64 GameID, int64 PlayerID
 		});
 }
 
+void UInvoFunctions::GetInvoCurrencyAmountForPlayer(TFunction<void(const FString&)> OnCurrencyAmountFetched)
+{
+	const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
+	TMap<FString, FString> FormData;
+
+	if (Settings->Game_ID.IsEmpty())
+	{
+		FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Please Enter Your GameID in the Invo Plugins Game ID Feild")));
+		return;
+	}
+
+	FString PlayerID = UInvoFunctions::GetSecretsIniKeyValue("PlayerID");
+	FormData.Add(TEXT("player_id"), PlayerID);
+	FormData.Add(TEXT("game_id"), Settings->Game_ID);
+
+
+	// 3. Directly make the HTTP request without using UInvoFunctions.
+	FString Endpoint = "https://api.dev.ourinvo.com/v1/external/player/currentbalance"; // Replace with your actual server address
+	FString HttpMethod = "POST";
+
+	//4. Headers 
+	TMap<FString, FString> Headers;
+
+	// Create HTTP Request
+	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> HttpRequest = FHttpModule::Get().CreateRequest();
+
+	HttpRequest->SetURL(Endpoint);
+	HttpRequest->SetVerb(HttpMethod);
+	HttpRequest->SetHeader(TEXT("User-Agent"), TEXT("X-UnrealEngine-Agent"));
+	//HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+	HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/x-www-form-urlencoded"));
+
+	FString Payload;
+	for (const auto& Pair : FormData)
+	{
+		if (!Payload.IsEmpty())
+		{
+			Payload.Append(TEXT("&"));
+		}
+		Payload.Append(FString::Printf(TEXT("%s=%s"), *Pair.Key, *Pair.Value));
+	}
+
+	HttpRequest->SetContentAsString(Payload);
+
+
+
+	for (const auto& Header : Headers)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Headers %s"), *Header.Value);
+
+	}
+	UE_LOG(LogTemp, Warning, TEXT("Payload is  %s"), *Payload);
+
+
+	// Make the HTTP request
+
+	MakeHttpRequest(Endpoint, HttpMethod, Headers, FormData, [OnCurrencyAmountFetched](TSharedPtr<FJsonObject> JsonObject)
+		{
+
+			if (JsonObject.IsValid() && JsonObject->HasField("message"))
+			{
+				FString CurrencyAmount;
+				TSharedPtr<FJsonObject> Data = JsonObject->GetObjectField("data");
+
+				CurrencyAmount = FString::FromInt(Data->GetIntegerField("current_balance"));
+				
+				OnCurrencyAmountFetched(CurrencyAmount);
+				UE_LOG(LogTemp, Warning, TEXT("Json Data is valid is  %s"),*CurrencyAmount);
+			}
+			else
+			{
+				OnCurrencyAmountFetched(FString("Failed to retrieve currency amount."));
+				UE_LOG(LogTemp, Warning, TEXT("Json Data is is not valid"));
+
+			}
+		});
+
+
+}
+
+
 void UInvoFunctions::GetInvoCurrencyAmountForPlayerBP(int64 GameID, int64 PlayerID, const FOnCurrencyAmountFetchedBP& OnCurrencyAmountFetchedBP)
 {
 	GetInvoCurrencyAmountForPlayer(GameID, PlayerID, [OnCurrencyAmountFetchedBP](const FString& CurrencyAmount)
+		{
+			OnCurrencyAmountFetchedBP.ExecuteIfBound(CurrencyAmount);
+		});
+}
+
+void UInvoFunctions::GetInvoCurrencyAmountForPlayerBP2(const FOnCurrencyAmountFetchedBP& OnCurrencyAmountFetchedBP)
+{
+	GetInvoCurrencyAmountForPlayer([OnCurrencyAmountFetchedBP](const FString& CurrencyAmount)
 		{
 			OnCurrencyAmountFetchedBP.ExecuteIfBound(CurrencyAmount);
 		});
@@ -2220,3 +2484,134 @@ bool UInvoFunctions::FillBPObjectFromJSON(const FString& JSONString, UObject* BP
 
 	return false;
 }
+
+void UInvoFunctions::InvoGetCurrentBalance()
+{
+	FString CurrencyBalance;
+	const UInvoFunctions* SettingsBalance = GetDefault<UInvoFunctions>();
+	if (SettingsBalance->Game_ID.IsEmpty())
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 5.0, FColor::Yellow, TEXT("Need to Set GameID in Invo Plugin Settings "));
+
+	}
+	else
+	{
+		if (UInvoFunctions::CheckSecretsIni("PlayerID"))
+		{
+
+			const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
+			TMap<FString, FString> FormData;
+
+			FString PlayerID = UInvoFunctions::GetSecretsIniKeyValue("PlayerID");
+			FormData.Add(TEXT("player_id"), PlayerID);
+			FormData.Add(TEXT("game_id"), Settings->Game_ID);
+
+
+			// 3. Directly make the HTTP request without using UInvoFunctions.
+			FString Endpoint = "https://api.dev.ourinvo.com/v1/external/player/currentbalance"; // Replace with your actual server address
+			FString HttpMethod = "POST";
+
+			//4. Headers 
+			TMap<FString, FString> Headers;
+
+			// Create HTTP Request
+			TSharedRef<IHttpRequest, ESPMode::ThreadSafe> HttpRequest = FHttpModule::Get().CreateRequest();
+
+			HttpRequest->SetURL(Endpoint);
+			HttpRequest->SetVerb(HttpMethod);
+			HttpRequest->SetHeader(TEXT("User-Agent"), TEXT("X-UnrealEngine-Agent"));
+			//HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+			HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/x-www-form-urlencoded"));
+
+			FString Payload;
+			for (const auto& Pair : FormData)
+			{
+				if (!Payload.IsEmpty())
+				{
+					Payload.Append(TEXT("&"));
+				}
+				Payload.Append(FString::Printf(TEXT("%s=%s"), *Pair.Key, *Pair.Value));
+			}
+
+			HttpRequest->SetContentAsString(Payload);
+
+
+
+			for (const auto& Header : Headers)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("Headers %s"), *Header.Value);
+
+			}
+			UE_LOG(LogTemp, Warning, TEXT("Payload is  %s"), *Payload);
+
+			// Make the HTTP Request
+		UInvoHttpManager::GetInstance()->MakeHttpRequest(Endpoint, HttpMethod, Headers, FormData,
+				[&](const bool bSuccess, const FString& ResponseContent)
+				{
+
+					if (UInvoHttpManager::GetInstance()->ValidateHttpManagerResponseContent(ResponseContent))
+					{
+						// Handle the valid response
+						// Log the response's content as a string.
+						FString StringbSuccess = bSuccess ? "True" : "False";
+						UE_LOG(LogTemp, Warning, TEXT("HTTP Response: %s and is bSucess %s"), *ResponseContent, *StringbSuccess);
+
+
+						TSharedPtr<FJsonObject> OutDataObject;
+						TArray<TSharedPtr<FJsonValue>> OutDataArray;
+						FString OutMessage;
+						bool OutResults;
+						UInvoHttpManager::GetInstance()-> ParseJSON(ResponseContent, OutDataObject, OutDataArray, OutMessage, OutResults);
+						FString Amount = OutDataObject->GetStringField("current_balance");
+						
+						//OutBalance = Amount;
+						UE_LOG(LogTemp, Warning, TEXT("Currenace balance %s"), *Amount);
+						//OnBalanceReceived.ExecuteIfBound(Amount);
+						//OnBalanceUpdated.Broadcast(Amount);  // Broadcasting the updated balance
+
+						//HandleHttpResponse(bSuccess, Amount);
+
+						
+					}
+					else
+					{
+						// Handle the invalid response
+						UE_LOG(LogTemp, Warning, TEXT("Failed to get a valid response with response %s"), *ResponseContent);
+
+						FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Failed to get a valid response")));
+
+					}
+				});
+		}
+
+	}
+}
+
+
+
+void UInvoFunctions::HandleHttpResponse(bool bWasSuccessful, const FString& ResponseContent)
+{
+	if (bWasSuccessful)
+	{
+		// Handle success.
+		UE_LOG(LogTemp, Warning, TEXT("Success Love: %s"), *ResponseContent);
+
+		//TSharedPtr<FJsonObject> OutDataObject;
+		//TArray<TSharedPtr<FJsonValue>> OutDataArray;
+		//FString OutMessage;
+		//bool OutResults;
+		//UInvoHttpManager::GetInstance()->ParseJSON(ResponseContent, OutDataObject, OutDataArray, OutMessage, OutResults);
+		//FString Amount = OutDataObject->GetStringField("current_balance");
+		UInvoFunctions::CurrentBalance = ResponseContent;
+		//OnBalanceUpdated.Broadcast(bWasSuccessful, CurrentBalance);
+
+	}
+	else
+	{
+		// Handle failure.
+		UE_LOG(LogTemp, Error, TEXT("Failure: %s"), *ResponseContent);
+	}
+}
+
+
+
