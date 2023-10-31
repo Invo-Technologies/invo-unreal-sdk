@@ -7,9 +7,16 @@
 
 #include "Runtime/Slate/Public/Widgets/Input/SComboBox.h"
 #include "Widgets/Input/SMultiLineEditableTextBox.h"
+#include "Widgets/DeclarativeSyntaxSupport.h"
+
+#include "InvoFunctions.h"
 
 class SEditableTextBox;
 class SSearchBox;
+class UInvoFunctions;
+class FJsonObject;
+class FJsonValue;
+
 
 struct FGameInfo {
     FString GameName = "";
@@ -23,24 +30,29 @@ DECLARE_DELEGATE(FClosePopupDelegate);
 class SInvoTransferWidget : public SCompoundWidget
 {
 public:
-    SLATE_BEGIN_ARGS(SInvoTransferWidget) {}
+    SLATE_BEGIN_ARGS(SInvoTransferWidget)
+        {}
+        SLATE_ARGUMENT(FOnCurrencyAmountFetchedBP, OnCurrencyAmountFetchedBP2)
     SLATE_END_ARGS()
 
-    void Construct(const FArguments& InArgs);
-    void SetupWidget();
-    void HandleHttpRequestCompleted(bool bWasSuccessful, const FString& ResponseContent);
-    bool ValidateTransferResponseContent(const FString& ResponseContent);
-    void FetchGameInFromAPI();
+        /** Constructs this widget with InArgs */
+        void Construct(const FArguments& InArgs);
 
-    void PopulateSearchBar(TArray<FGameInfo> GameInfos);
-    int GetGameIDFromName(FString GameName, TArray<FGameInfo> GameInfos);
+        void SetupWidget();
+        void HandleHttpRequestCompleted(bool bWasSuccessful, const FString& ResponseContent);
+        bool ValidateTransferResponseContent(const FString& ResponseContent);
+        void FetchGameInFromAPI();
 
-    FOnGamesInfoReceived OnGamesInfoReceived;
+        void PopulateSearchBar(TArray<FGameInfo> GameInfos);
+        int GetGameIDFromName(FString GameName, TArray<FGameInfo> GameInfos);
 
-    
-
+        FOnGamesInfoReceived OnGamesInfoReceived;
+   
 
 private:
+
+    FOnCurrencyAmountFetchedBP OnCurrencyAmountFetchedBPDelegate;
+
     // UI Elements
     TSharedPtr<SEditableTextBox> SubjectTextBox;
     TSharedPtr <SEditableTextBox> FromPlayerIDTextBox;

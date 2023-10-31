@@ -444,12 +444,10 @@ public:
 
 	static void GetInvoCurrencyAmountForPlayer(TFunction<void(const FString&)> OnCurrencyAmountFetched);
 
-
-	UFUNCTION(BlueprintCallable, Category = "Invo", meta = (DisplayName = "Get Currency Amount For Player in BP"))
 	static void GetInvoCurrencyAmountForPlayerBP(int64 GameID, int64 PlayerID, const FOnCurrencyAmountFetchedBP& OnCurrencyAmountFetchedBP);
 
 	UFUNCTION(BlueprintCallable, Category = "Invo", meta = (DisplayName = "Get Currency Amount For Player in BP"))
-	static void GetInvoCurrencyAmountForPlayerBP2(const FOnCurrencyAmountFetchedBP& OnCurrencyAmountFetchedBP);
+	static void GetInvoCurrencyAmountForPlayerBP(const FOnCurrencyAmountFetchedBP& OnCurrencyAmountFetchedBP);
 
 	static bool bIsTransferCompleted;
 
@@ -467,8 +465,10 @@ public:
 
 	// Displays the SInvoTicketWidget
 	UFUNCTION(BlueprintCallable, Category = "Invo")
-	static void InvoShowTransferWidget();
+	static void InvoShowTransferWidget(const FOnCurrencyAmountFetchedBP& OnCurrencyAmountFetchedBP);
 
+	UFUNCTION(BlueprintCallable, Category = "Invo")
+	static void InvoShowTransferWidget2(const FOnCurrencyAmountFetchedBP& OnCurrencyAmountFetchedBP);
 	// Displays the SInvoPurchaseWidget
 	UFUNCTION(BlueprintCallable, Category = "Invo")
 	static void InvoShowPurchaseWidget();
@@ -551,7 +551,7 @@ public:
 
 	void InvoGetCurrentBalance();
 
-	
+
 private:
 
 	static void MakeHttpRequest(const FString& Url, const FString& Method, FString& JsonData, TFunction<void(TSharedPtr<FJsonObject>)> Callback);

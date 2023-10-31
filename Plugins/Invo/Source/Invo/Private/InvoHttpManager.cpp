@@ -10,7 +10,11 @@
 #include "Kismet/GameplayStatics.h"
 #include "Runtime/Engine/Classes/Engine/World.h"
 
+#include "Http.h"
+#include "Dom/JsonObject.h"
+#include "Serialization/JsonReader.h"
 
+#include "Serialization/JsonSerializer.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/GameViewportClient.h"
@@ -149,6 +153,141 @@ void UInvoHttpManager::MakeHttpRequest(const FString& URL, const FString& HttpMe
     // Execute the request
     Request->ProcessRequest();
 }
+
+//void UInvoHttpManager ::MakeHttpRequest(const FString& URL, const FString& HttpMethod, const TMap<FString, FString>& Headers, const TMap<FString, FString>& FormData, TFunction<void(TSharedPtr<FJsonObject>)> Callback)
+//{
+//    TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
+//
+//
+//    // Set HTTP method (GET, POST, PUT, etc.)
+//    Request->SetVerb(HttpMethod);
+//
+//    // Set the request URL
+//    Request->SetURL(URL);
+//
+//    if (Headers.IsEmpty())
+//    {
+//        Request->SetHeader(TEXT("User-Agent"), TEXT("X-UnrealEngine-Agent"));
+//        Request->SetHeader(TEXT("Content-Type"), TEXT("application/x-www-form-urlencoded"));
+//
+//    }
+//    else
+//
+//    {
+//        for (const auto& Header : Headers)
+//        {
+//            Request->SetHeader(Header.Key, Header.Value);
+//        }
+//    }
+//    // Set headers, if any
+//
+//    FString SecretsIniFilePath = FPaths::ProjectConfigDir() + TEXT("Secrets.ini");
+//    FString SecretsNormalizeConfigIniPath = FConfigCacheIni::NormalizeConfigIniPath(SecretsIniFilePath);
+//
+//    FPaths::NormalizeFilename(SecretsNormalizeConfigIniPath);
+//    FString AuthCodeKey;
+//    if (GConfig->GetString(TEXT("/Script/Invo.UInvoFunctions"), TEXT("AUTHCODEKEY"), AuthCodeKey, SecretsNormalizeConfigIniPath))
+//    {
+//        FString HexKeyString = TEXT("1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF"); // 64 hex characters
+//
+//        FString DecryptDataAuthCode = UInvoFunctions::DecryptData(AuthCodeKey, HexKeyString);
+//        UE_LOG(LogTemp, Warning, TEXT("Decrypted AuthCode Key: %s"), *DecryptDataAuthCode);
+//        if (!DecryptDataAuthCode.IsEmpty())
+//        {
+//
+//            Request->SetHeader(TEXT("auth_code"), DecryptDataAuthCode);
+//
+//        }
+//        else
+//        {
+//            UE_LOG(LogTemp, Error, TEXT("AuthCode Key is empty: %s"), *AuthCodeKey);
+//            FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Need to Initiliaze Invo SDK first.")));
+//
+//            UInvoFunctions::OpenInvoInitWebPage();
+//            return;
+//
+//        }
+//    }
+//    else
+//    {
+//        UE_LOG(LogTemp, Error, TEXT("Failed to get authcode key from config file"));
+//        FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Need to Initiliaze Invo SDK first.")));
+//
+//        UInvoFunctions::OpenInvoInitWebPage();
+//        return;
+//    }
+//
+//    // Format the payload as x-www-form-urlencoded
+//    FString Payload;
+//    for (const auto& Pair : FormData)
+//    {
+//        if (!Payload.IsEmpty())
+//        {
+//            Payload.Append(TEXT("&"));
+//        }
+//        Payload.Append(FString::Printf(TEXT("%s=%s"), *Pair.Key, *Pair.Value));
+//    }
+//
+//    Request->SetContentAsString(Payload);
+//
+//    // Bind the request's completion delegate
+//    //Request->OnProcessRequestComplete().BindUObject(this, &UInvoHttpManager::HttpRequestCompleted);
+//    Request->OnProcessRequestComplete().BindLambda([Callback](FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful)
+//        {
+//            if (bWasSuccessful && Response.IsValid())
+//
+//                // Check the response code
+//                if (EHttpResponseCodes::IsOk(Response->GetResponseCode()))
+//                {
+//                    // Deserialize the response into a JSON object
+//                    FString ResponseString = Response->GetContentAsString();
+//                    TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(ResponseString);
+//                    TSharedPtr<FJsonValue> JsonValue;
+//                    if (FJsonSerializer::Deserialize(Reader, JsonValue))
+//                    {
+//                        if (JsonValue->Type == EJson::Object)
+//                        {
+//                            // Handle JSON object
+//                            TSharedPtr<FJsonObject> JsonObject = JsonValue->AsObject();
+//                            Callback(JsonObject);
+//                        }
+//                        else if (JsonValue->Type == EJson::Array)
+//                        {
+//                            // Handle JSON array
+//                            TArray<TSharedPtr<FJsonValue>> JsonArray = JsonValue->AsArray();
+//                            for (const TSharedPtr<FJsonValue>& Item : JsonArray)
+//                            {
+//                                if (Item->Type == EJson::Object)
+//                                {
+//                                    TSharedPtr<FJsonObject> JsonObject = Item->AsObject();
+//                                    Callback(JsonObject);
+//                                }
+//                            }
+//                        }
+//                    }
+//                    else
+//                    {
+//                        // JSON parsing failed
+//                        UE_LOG(LogTemp, Error, TEXT("Failed to parse JSON response"));
+//                    }
+//                }
+//                else
+//                {
+//                    // Unsuccessful API call
+//                    UE_LOG(LogTemp, Error, TEXT("API call failed with status code: %d"), Response->GetResponseCode());
+//                }
+//
+//            else
+//
+//                // Network-related errors or other issues
+//                UE_LOG(LogTemp, Error, TEXT("HTTP request failed"));
+//
+//        });
+//
+//    // Execute the request
+//    Request->ProcessRequest();
+//
+//}
 
 void UInvoHttpManager::HttpRequestCompleted(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful)
 {

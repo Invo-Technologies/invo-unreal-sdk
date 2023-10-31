@@ -3,6 +3,7 @@
 #include "InvoFunctions.h"
 #include "InvoHttpManager.h"
 #include "Widgets/Layout/SBorder.h"
+#include "Widgets/DeclarativeSyntaxSupport.h"
 #include "Widgets/Input/SButton.h"
 
 #include "Runtime/Online/HTTP/Public/Http.h"
@@ -15,11 +16,16 @@
 #include "Runtime/Core/Public/GenericPlatform/GenericPlatformMisc.h"
 #include "Runtime/Core/Public/Misc/MessageDialog.h"
 #include "Runtime/SlateCore/Public/Widgets/SWidget.h"
+#include "Widgets/DeclarativeSyntaxSupport.h"
 
 
 
 void SInvoTransferWidget::Construct(const FArguments& InArgs)
 {
+    //OnFunCurrencyAmountFetchedDBPDelegate = InArgs._OnCurrencyAmountFetchedBP;
+    //InvoFunctionsInstance = NewObject<UInvoFunctions>();
+    OnCurrencyAmountFetchedBPDelegate = InArgs._OnCurrencyAmountFetchedBP2;
+
     FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Tap the Load Game Button First to Load Game")));
 
     // Populate PriorityOptions
@@ -251,7 +257,7 @@ FReply SInvoTransferWidget::OnTransferClicked()
 {
     if (UInvoFunctions::CheckSecretsIni("PlayerID"))
     {
-    
+       
         const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
         TMap<FString, FString> FormData;
         
@@ -324,6 +330,26 @@ FReply SInvoTransferWidget::OnTransferClicked()
 
                     UWorld* World = GWorld->GetWorld();
 
+
+                    TSharedPtr<FJsonObject> OutDataObject;
+                    TArray<TSharedPtr<FJsonValue>> OutDataArray;
+                    FString OutMessage;
+                    bool OutResults;
+                    UInvoHttpManager::GetInstance()->ParseJSON(ResponseContent, OutDataObject, OutDataArray, OutMessage, OutResults);
+                    FString CurrencyAmount = OutDataObject->GetStringField("current_balance");
+
+
+                    // Check if the delegate is bound to avoid runtime errors
+                    if (OnCurrencyAmountFetchedBPDelegate.IsBound())
+                    {
+                        // Execute the delegate with the currency amount
+                        OnCurrencyAmountFetchedBPDelegate.Execute(CurrencyAmount);
+                    }
+                    else
+                    {
+                        // You might want to log or handle the case where nothing is bound to the delegate
+                        UE_LOG(LogTemp, Warning, TEXT("No function bound to OnCurrencyAmountFetchedBP delegate."));
+                    }
 
                     // Restore player input and cursor mode
                     APlayerController* PlayerController = World->GetFirstPlayerController();

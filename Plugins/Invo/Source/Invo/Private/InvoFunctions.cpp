@@ -1617,7 +1617,7 @@ void UInvoFunctions::GetInvoCurrencyAmountForPlayerBP(int64 GameID, int64 Player
 		});
 }
 
-void UInvoFunctions::GetInvoCurrencyAmountForPlayerBP2(const FOnCurrencyAmountFetchedBP& OnCurrencyAmountFetchedBP)
+void UInvoFunctions::GetInvoCurrencyAmountForPlayerBP(const FOnCurrencyAmountFetchedBP& OnCurrencyAmountFetchedBP)
 {
 	GetInvoCurrencyAmountForPlayer([OnCurrencyAmountFetchedBP](const FString& CurrencyAmount)
 		{
@@ -1750,7 +1750,7 @@ void UInvoFunctions::InvoShowSKeyInputDialog()
 	FSlateApplication::Get().AddWindow(Window);
 }
 
-void UInvoFunctions::InvoShowTransferWidget()
+void UInvoFunctions::InvoShowTransferWidget(const FOnCurrencyAmountFetchedBP& OnCurrencyAmountFetchedBP)
 {
 	// Create a InvoTransfer Widget instance
 	Window = SNew(SWindow)
@@ -1760,6 +1760,19 @@ void UInvoFunctions::InvoShowTransferWidget()
 		.SupportsMaximize(true);
 
 	Window->SetContent(SNew(SInvoTransferWidget));
+	FSlateApplication::Get().AddWindow(Window);
+}
+
+void UInvoFunctions::InvoShowTransferWidget2(const FOnCurrencyAmountFetchedBP& OnCurrencyAmountFetchedBP)
+{
+	// Create a InvoTransfer Widget instance Test call back that now works
+	Window = SNew(SWindow)
+		.Title(NSLOCTEXT("InvoTransfer", "WindowTitle", "Invo Transfer System"))
+		.ClientSize(FVector2D(500, 500))
+		.SupportsMinimize(true)
+		.SupportsMaximize(true);
+
+	Window->SetContent(SNew(SInvoTransferWidget).OnCurrencyAmountFetchedBP2(OnCurrencyAmountFetchedBP));
 	FSlateApplication::Get().AddWindow(Window);
 }
 

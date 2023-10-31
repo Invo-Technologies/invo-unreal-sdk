@@ -14,6 +14,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHttpRequestCompletedDelegate, bool
 //DECLARE_DELEGATE_TwoParams(FHttpRequestCompletedDelegate, bool, const FString&);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FHttpResponseReceived, bool, bSuccess, const FString&, ResponseString);
 
+class FJsonObject;
+class FJsonValue;
+
 UCLASS()
 class INVO_API UInvoHttpManager : public UObject
 {
@@ -28,6 +31,8 @@ public:
 
 
     void MakeHttpRequest(const FString& URL, const FString& HttpMethod, const TMap<FString, FString>& Headers, const TMap<FString, FString>& FormData, HttpRequestCallback Callback);
+
+    //void MakeHttpRequest(const FString& URL, const FString& HttpMethod, const TMap<FString, FString>& Headers, const TMap<FString, FString>& FormData, TFunction<void(TSharedPtr<FJsonObject>)> Callback);
 
     // This delegate is what we will bind to in the widget.
     UPROPERTY(BlueprintAssignable, Category = "Invo")
