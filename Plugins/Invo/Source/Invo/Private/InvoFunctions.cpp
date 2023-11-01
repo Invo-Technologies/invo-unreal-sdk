@@ -1447,6 +1447,102 @@ void UInvoFunctions::TransferCurrency(int64 SourceGameID, int64 SourcePlayerID, 
 		});
 }
 
+void UInvoFunctions:: TransferCurrency(int64 TargetGameID, int64 TargetPlayerID, int Amount, FString CurrencyName, const FString& Pin,  TFunction<void(const FString&)> OnTransferCompleted)
+{
+	const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
+	TMap<FString, FString> FormData;
+
+	if (Settings->Game_ID.IsEmpty())
+	{
+		FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Please Enter Your GameID in the Invo Plugins Game ID Feild")));
+		return;
+	}
+
+	FString PlayerID = UInvoFunctions::GetSecretsIniKeyValue("PlayerID");
+	FString Skey = UInvoFunctions::GetSecretsIniKeyValue("SKeyCode");
+
+
+	FormData.Add(TEXT("from_player_id"), PlayerID);
+	FormData.Add(TEXT("from_game_id"), Settings->Game_ID);
+	if (!CheckSecretsIni("SKeyCode"))
+	{
+		FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("SKey Code is not Set in Ini File.")));
+		return;
+	}
+
+	if (FString::FromInt(TargetGameID).IsEmpty() || Pin.IsEmpty() || FString::FromInt(Amount).IsEmpty() || FString::FromInt(TargetGameID).IsEmpty())
+	{
+		FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Make Sure All Feilds are Filled.")));
+		return;
+	}
+	
+	FString DecryptedSKey = UInvoFunctions::DecryptData(Skey, Pin, "SKeyCode");
+	
+	FormData.Add(TEXT("to_player_id"), FString::FromInt(TargetPlayerID));
+	FormData.Add(TEXT("to_game_id"),  FString::FromInt(TargetGameID));
+	FormData.Add(TEXT("amount"), FString::FromInt(Amount));
+	FormData.Add(TEXT("s_key"), DecryptedSKey);
+
+
+	// 3. Directly make the HTTP request without using UInvoFunctions.
+	FString Endpoint = "https://api.dev.ourinvo.com/v1/external/player/transfer"; // Replace with your actual server address
+	FString HttpMethod = "POST";
+
+	//4. Headers 
+	TMap<FString, FString> Headers;
+
+	// Create HTTP Request
+	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> HttpRequest = FHttpModule::Get().CreateRequest();
+
+	HttpRequest->SetURL(Endpoint);
+	HttpRequest->SetVerb(HttpMethod);
+	HttpRequest->SetHeader(TEXT("User-Agent"), TEXT("X-UnrealEngine-Agent"));
+	HttpRequest->SetHeader(TEXT("Content-Type"), TEXT("application/x-www-form-urlencoded"));
+
+	FString Payload;
+	for (const auto& Pair : FormData)
+	{
+		if (!Payload.IsEmpty())
+		{
+			Payload.Append(TEXT("&"));
+		}
+		Payload.Append(FString::Printf(TEXT("%s=%s"), *Pair.Key, *Pair.Value));
+	}
+
+	HttpRequest->SetContentAsString(Payload);
+
+
+
+	for (const auto& Header : Headers)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Headers %s"), *Header.Value);
+
+	}
+	UE_LOG(LogTemp, Warning, TEXT("Payload is  %s"), *Payload);
+
+
+	// Make the HTTP request
+	MakeHttpRequest(Endpoint, HttpMethod, Headers, FormData, [OnTransferCompleted](TSharedPtr<FJsonObject> JsonObject)
+		{
+
+			if (JsonObject.IsValid() && JsonObject->HasField("message"))
+			{
+				FString CurrencyAmount;
+				TSharedPtr<FJsonObject> Data = JsonObject->GetObjectField("data");
+
+				CurrencyAmount = FString::FromInt(Data->GetIntegerField("current_balance"));
+
+				OnTransferCompleted(CurrencyAmount);
+				UE_LOG(LogTemp, Warning, TEXT("Json Data is valid is  %s"), *CurrencyAmount);
+			}
+			else
+			{
+				OnTransferCompleted(FString("Failed to retrieve currency amount."));
+				UE_LOG(LogTemp, Warning, TEXT("Json Data is is not valid"));
+
+			}
+		});
+}
 
 void UInvoFunctions::TransferCurrencyBP(int64 SourceGameID, int64 SourcePlayerID, int64 TargetGameID, int64 TargetPlayerID, float Amount, FString CurrencyName, FOnInvoAPICallCompleted OnTransferCompleted)
 {
@@ -1454,6 +1550,14 @@ void UInvoFunctions::TransferCurrencyBP(int64 SourceGameID, int64 SourcePlayerID
 		{
 			bool bSuccess = Result == "Currency transferred successfully";
 			OnTransferCompleted.ExecuteIfBound(bSuccess);
+		});
+}
+
+void UInvoFunctions::InvoTransferCurrencyBP(int64 TargetGameID, int64 TargetPlayerID, float Amount, FString CurrencyName, const FString& Pin, FOnCurrencyAmountFetchedBP OnTransferCompleted)
+{
+	TransferCurrency(TargetGameID, TargetPlayerID, Amount, CurrencyName, Pin, [OnTransferCompleted](const FString& Result)
+		{
+			OnTransferCompleted.ExecuteIfBound(Result);
 		});
 }
 
@@ -1753,19 +1857,6 @@ void UInvoFunctions::InvoShowSKeyInputDialog()
 void UInvoFunctions::InvoShowTransferWidget(const FOnCurrencyAmountFetchedBP& OnCurrencyAmountFetchedBP)
 {
 	// Create a InvoTransfer Widget instance
-	Window = SNew(SWindow)
-		.Title(NSLOCTEXT("InvoTransfer", "WindowTitle", "Invo Transfer System"))
-		.ClientSize(FVector2D(500, 500))
-		.SupportsMinimize(true)
-		.SupportsMaximize(true);
-
-	Window->SetContent(SNew(SInvoTransferWidget));
-	FSlateApplication::Get().AddWindow(Window);
-}
-
-void UInvoFunctions::InvoShowTransferWidget2(const FOnCurrencyAmountFetchedBP& OnCurrencyAmountFetchedBP)
-{
-	// Create a InvoTransfer Widget instance Test call back that now works
 	Window = SNew(SWindow)
 		.Title(NSLOCTEXT("InvoTransfer", "WindowTitle", "Invo Transfer System"))
 		.ClientSize(FVector2D(500, 500))

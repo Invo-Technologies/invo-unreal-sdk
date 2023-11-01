@@ -435,6 +435,9 @@ public:
 	static void TransferCurrencyBP(int64 SourceGameID, int64 SourcePlayerID, int64 TargetGameID, int64 TargetPlayerID, float Amount, FString CurrencyName, FOnInvoAPICallCompleted OnTransferCompleted);
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
+	static void InvoTransferCurrencyBP(int64 TargetGameID, int64 TargetPlayerID, float Amount, FString CurrencyName, const FString& Pin, FOnCurrencyAmountFetchedBP OnTransferCompleted);
+
+	UFUNCTION(BlueprintCallable, Category = "Invo")
 	static void InvoTransferCurrencyWebViewBP(FOnInvoAPICallCompleted OnTransferCompleted);
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
@@ -467,8 +470,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Invo")
 	static void InvoShowTransferWidget(const FOnCurrencyAmountFetchedBP& OnCurrencyAmountFetchedBP);
 
-	UFUNCTION(BlueprintCallable, Category = "Invo")
-	static void InvoShowTransferWidget2(const FOnCurrencyAmountFetchedBP& OnCurrencyAmountFetchedBP);
 	// Displays the SInvoPurchaseWidget
 	UFUNCTION(BlueprintCallable, Category = "Invo")
 	static void InvoShowPurchaseWidget();
@@ -593,6 +594,8 @@ private:
 
 	static void TransferCurrency(int64 SourceGameID, int64 SourcePlayerID, int64 TargetGameID, int64 TargetPlayerID, float Amount, FString CurrencyName, TFunction<void(const FString&)> OnTransferCompleted);
 	
+	static void TransferCurrency(int64 TargetGameID, int64 TargetPlayerID, int Amount, FString CurrencyName, const FString& Pin, TFunction<void(const FString&)> OnTransferCompleted);
+
 	static void FetchCurrenciesForUser(int64 GameID, int64 PlayerID, TFunction<void(const TArray<FCurrencyData>&)> OnCurrenciesFetched);
 
 	static TSharedPtr<SInvoTicketWidget> InvoTicketWidget;
