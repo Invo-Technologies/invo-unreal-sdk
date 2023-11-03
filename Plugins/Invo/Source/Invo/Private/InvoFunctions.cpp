@@ -15,8 +15,7 @@
 #include "Misc/Base64.h"
 
 #include "InvoHttpManager.h"
-#include <regex>
-
+#include "Runtime/Core/Public/Internationalization/Regex.h"
 #include "ThirdParty/SQLite/include/sqlite3.h"
 
 
@@ -1850,7 +1849,7 @@ void UInvoFunctions::InvoShowSKeyInputDialog()
 		.SupportsMaximize(true);
 
 	Window->SetContent(SNew(SKeyInputDialog));
-
+	
 	FSlateApplication::Get().AddWindow(Window);
 }
 
@@ -1918,14 +1917,12 @@ TMap<FString, FString> UInvoFunctions::InvoConvertJSONStringToMap(const FString&
 
 FString UInvoFunctions::ExtractCodeFromHTMLSource(const FString& HtmlSource)
 {
-	std::wstring Source(*HtmlSource); // Convert FString to std::wstring
-	std::wregex Pattern(L"\"code\":\"([^\"]+)\""); // Regular expression pattern to match "code":"<value>"
-	std::wsmatch Matches;
+	FRegexPattern Pattern(TEXT("\"code\":\"([^\"]+)\""));
+	FRegexMatcher Matcher(Pattern, HtmlSource);
 
-	if (std::regex_search(Source, Matches, Pattern) && Matches.size() > 1)
+	if (Matcher.FindNext())
 	{
-		// Convert the matched value to FString and return
-		return FString(Matches[1].str().c_str());
+		return Matcher.GetCaptureGroup(1);
 	}
 
 	// Return an empty string if the pattern wasn't found
@@ -2342,7 +2339,7 @@ FString UInvoFunctions::GetSecretsIniKeyValue(const FString& KeyVariable)
 	}
 	else // If the KeyVariable does not exist, add it
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Existing Value: %s does not exsist"), *ExistingValue);
+		UE_LOG(LogTemp, Warning, TEXT("Secrets Key %s Value Value: does not exsist"),*KeyVariable);
 		return ExistingValue;
 	}
 	return ExistingValue;

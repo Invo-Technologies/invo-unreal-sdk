@@ -85,9 +85,10 @@ FReply SKeyInputDialog:: OnOkClicked()
     // Use the key as needed
     // ...
 
-    FString EncryptDataAuthCode = UInvoFunctions::EncryptData("SomeKey", Key);
-    UE_LOG(LogTemp,Warning,TEXT("EncryptDataAuthCode is  %s"), *EncryptDataAuthCode)
-    UInvoFunctions::UpdateSecretsIni("SKeyCode", EncryptDataAuthCode);
+    FString SKeyCode = UInvoFunctions::GetSecretsIniKeyValue("SKeyCode");
+    FString EncryptDataSKeyCode = UInvoFunctions::EncryptData(SKeyCode, Key);
+    UE_LOG(LogTemp,Warning,TEXT("EncryptDataSKeyCode is  %s"), *EncryptDataSKeyCode)
+    UInvoFunctions::UpdateSecretsIni("SKeyCode", EncryptDataSKeyCode);
     // FString DecryptDataAuthCode = UInvoFunctions::DecryptData(EncryptDataAuthCode, Key,"SKeyCode");
     //UE_LOG(LogTemp, Warning, TEXT("DecryptDataAuthCode is ---  %s"), *DecryptDataAuthCode)
 

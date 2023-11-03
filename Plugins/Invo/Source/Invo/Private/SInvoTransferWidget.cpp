@@ -262,12 +262,14 @@ FReply SInvoTransferWidget::OnTransferClicked()
         TMap<FString, FString> FormData;
         
         FString PlayerID = UInvoFunctions::GetSecretsIniKeyValue("PlayerID");
+        FString SKey = UInvoFunctions::GetSecretsIniKeyValue("SKeyCode");
         FormData.Add(TEXT("from_player_id"), PlayerID);
         FormData.Add(TEXT("from_game_id"), Settings->Game_ID);
         FormData.Add(TEXT("to_player_id"), TargetPlayerIDTextBox->GetText().ToString());
         FormData.Add(TEXT("to_game_id"), FString::FromInt(CurrentGame->GameID));
         FormData.Add(TEXT("amount"), DefaultCurrencyAmountTextBox->GetText().ToString());
-        FormData.Add(TEXT("s_key"), PinTextBox->GetText().ToString());
+        FString DecryptedSKey = UInvoFunctions::DecryptData(SKey, PinTextBox->GetText().ToString(), "SKeyCode");
+        FormData.Add(TEXT("s_key"), DecryptedSKey);
         
 
         // 3. Directly make the HTTP request without using UInvoFunctions.

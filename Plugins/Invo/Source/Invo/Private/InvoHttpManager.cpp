@@ -502,6 +502,17 @@ void UInvoHttpManager::CreatePlayerID(const FString& UniquePlayerID)
                     {
                         UE_LOG(LogTemp, Warning, TEXT("PlayerId %s is created "), *PlayerIDString);
                         UInvoFunctions::UpdateSecretsIni("PlayerID", PlayerIDString);
+                        UInvoFunctions::UpdateSecretsIni("SKeyCode", PlayerName); // Temp Akissi Jesus switch to Skey
+                        FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Please Set A One Time 6 Digit Pin")));
+                        UInvoFunctions::InvoShowSKeyInputDialog();
+
+
+
+                    }
+                    else if (!UInvoFunctions::CheckSecretsIni("SKeyCode"))
+                    {
+                        FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Please Set A One Time 6 Digit Pin")));
+                        UInvoFunctions::InvoShowSKeyInputDialog();
 
                     }
                     else
