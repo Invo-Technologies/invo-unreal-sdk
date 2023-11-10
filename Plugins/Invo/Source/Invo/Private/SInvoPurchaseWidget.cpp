@@ -116,18 +116,19 @@ FReply SInvoPurchaseWidget::OnPurchaseClicked()
     }
 
 
-    const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
+    //const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
 
     TMap<FString, FString> FormData;
-    
-    if (Settings->Player_ID.IsEmpty())
+    FString Player_ID = UInvoFunctions::GetSecretsIniKeyValue("PlayerID");
+    FString Game_ID = UInvoFunctions::GetSecretsIniKeyValue("GameID");
+    if (Player_ID.IsEmpty())
     {
        // UInvoHttpManager::GetInstance()->CreatePlayerID();
     }
   
 
-    FormData.Add(TEXT("player_id"), Settings->Player_ID);
-    FormData.Add(TEXT("game_id"), Settings->Game_ID);
+    FormData.Add(TEXT("player_id"), Player_ID);
+    FormData.Add(TEXT("game_id"), Game_ID);
 
 
 

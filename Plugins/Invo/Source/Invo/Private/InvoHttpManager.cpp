@@ -413,7 +413,7 @@ void UInvoHttpManager::CreatePlayerID(const FString& UniquePlayerID)
     // Player Registration 
 
     UWorld* World = GWorld->GetWorld();
-    const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
+    //const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
 
 
     if (World)
@@ -423,22 +423,22 @@ void UInvoHttpManager::CreatePlayerID(const FString& UniquePlayerID)
         UE_LOG(LogTemp, Warning, TEXT("Testing player ID %s"), *UniquePlayerID);
 
 
-        if (!Settings->Player_ID.IsEmpty())
+        if (!UInvoFunctions::GetSecretsIniKeyValue("PlayerID").IsEmpty())
         {
-            UE_LOG(LogTemp, Warning, TEXT("Player %s is already registered"), *Settings->Player_ID);
+            UE_LOG(LogTemp, Warning, TEXT("Player %s is already registered"), *UInvoFunctions::GetSecretsIniKeyValue("PlayerID"));
         }
 
         // Settings from Invo SDK Feilds
 
         TMap<FString, FString> FormData;
 
-        if (Settings->Game_ID.IsEmpty())
+        if (UInvoFunctions::GetSecretsIniKeyValue("GameID").IsEmpty())
         {
             FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Please Enter Your GameID in the Invo Plugins Game ID Feild")));
             return;
         }
 
-        FormData.Add(TEXT("game_id"), Settings->Game_ID);
+        FormData.Add(TEXT("game_id"), UInvoFunctions::GetSecretsIniKeyValue("GameID"));
         FormData.Add(TEXT("player_name"), UniquePlayerID);
 
 
@@ -576,8 +576,9 @@ bool UInvoHttpManager::ValidateHttpManagerResponseContent(const FString& Respons
 void UInvoHttpManager::InvoFetchCurrencyBalanceBP()
 {
     FString CurrencyBalance;
-    const UInvoFunctions* SettingsBalance = GetDefault<UInvoFunctions>();
-    if (SettingsBalance->Game_ID.IsEmpty())
+    FString Game_ID = UInvoFunctions::GetSecretsIniKeyValue("GameID");
+   // const UInvoFunctions* SettingsBalance = GetDefault<UInvoFunctions>();
+    if (Game_ID.IsEmpty())
     {
         GEngine->AddOnScreenDebugMessage(-1, 5.0, FColor::Yellow, TEXT("Need to Set GameID in Invo Plugin Settings "));
 
@@ -587,12 +588,12 @@ void UInvoHttpManager::InvoFetchCurrencyBalanceBP()
         if (UInvoFunctions::CheckSecretsIni("PlayerID"))
         {
 
-            const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
+            //const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
             TMap<FString, FString> FormData;
 
             FString PlayerID = UInvoFunctions::GetSecretsIniKeyValue("PlayerID");
             FormData.Add(TEXT("player_id"), PlayerID);
-            FormData.Add(TEXT("game_id"), Settings->Game_ID);
+            FormData.Add(TEXT("game_id"), Game_ID);
 
 
             // 3. Directly make the HTTP request without using UInvoFunctions.

@@ -122,7 +122,7 @@ struct FInvoAssetData
 		FString Asset_ID;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "FInvoAssetData")
-		ETokenPair TP;
+		ETokenPair TP = ETokenPair::INVO;
 
 	/**
 	* There is an additional “Reference” variable that is the (String) name of their Default_Currency.
@@ -310,73 +310,73 @@ public:
 
 	UInvoFunctions(const FObjectInitializer& ObjectInitializer);
 
-	UPROPERTY(config, EditAnywhere, Category = Settings)
-		bool Active = false;
-
-	/**
-	* Applications ID or Account_ID
-	* @param OutMaxPacket [int32&] Maximum packet size.
-	**/
-	UPROPERTY(config, EditAnywhere, Category = Settings)
-	FString Account_ID;
-
-	/**
-	* Applications ID or Game_ID
-	**/
-	UPROPERTY(config, EditAnywhere, Category = Settings)
-	FString Game_ID;
-
-	/**
-	* Applications ID or Player_ID
-	**/
-
-	UPROPERTY(config, EditAnywhere, Category = Settings)
-	FString Player_ID;
-
-	/**
-	* Applications ID or PlayerGmail
-	**/
-	UPROPERTY(config, EditAnywhere, Category = Settings)
-	FString PlayerEmail;
-
-	/**
-	* Applications ID or PlayerName
-	**/
-
-	UPROPERTY(config, EditAnywhere, Category = Settings)
-	FString PlayerName;
-
-
-
-
-	/**
-	* BabeNod
-	* Choose the primary (IN) RPC: this is the INVO Babe Node responsible for RPC and API requests between Game Server and Origin Node.
-	* INVO Babe Node = Default
-	* INVO Babe Node = Sandbox
-	**/
-	UPROPERTY(config, EditAnywhere, Category = Settings)
-		EBabeNodeSetting Node;
-
-	/**
-	* This is the name of the game's default resource that will be traded on the INVO exchange.
-	* This field will require the Game Developer to instantiate an unsigned integer equivalent to the U.S Dollar
-	* amount of how much their currency is evaluated at in the GAME_ID’s trading pair within their Pool_ID.
-	**/
-	UPROPERTY(config, EditAnywhere, Category = Settings)
-		FString Default_Currency;
-
-	/**
-	* This will be a randomly generated unsigned integer.
-	**/
-	UPROPERTY(config, EditAnywhere, Category = Settings)
-		int32 Pool_ID;
-
-	UPROPERTY(config, EditAnywhere, Category = Settings)
-		FInvoAssetData AssetData;
-
-	UPROPERTY(config, EditAnywhere, Category = Settings)
-		FString Function_ID;
+	//UPROPERTY(config, EditAnywhere, Category = Settings)
+	//bool Active = false;
+	//
+	///**
+	//* Applications ID or Account_ID
+	//* @param OutMaxPacket [int32&] Maximum packet size.
+	//**/
+	//UPROPERTY(config, EditAnywhere, Category = Settings)
+	//FString Account_ID;
+	//
+	///**
+	//* Applications ID or Game_ID
+	//**/
+	//UPROPERTY(config, EditAnywhere, Category = Settings)
+	//FString Game_ID;
+	//
+	///**
+	//* Applications ID or Player_ID
+	//**/
+	//
+	//UPROPERTY(config, EditAnywhere, Category = Settings)
+	//FString Player_ID;
+	//
+	///**
+	//* Applications ID or PlayerGmail
+	//**/
+	//UPROPERTY(config, EditAnywhere, Category = Settings)
+	//FString PlayerEmail;
+	//
+	///**
+	//* Applications ID or PlayerName
+	//**/
+	//
+	//UPROPERTY(config, EditAnywhere, Category = Settings)
+	//FString PlayerName;
+	//
+	//
+	//
+	//
+	///**
+	//* BabeNod
+	//* Choose the primary (IN) RPC: this is the INVO Babe Node responsible for RPC and API requests between Game Server and Origin Node.
+	//* INVO Babe Node = Default
+	//* INVO Babe Node = Sandbox
+	//**/
+	//UPROPERTY(config, EditAnywhere, Category = Settings)
+	//	EBabeNodeSetting Node;
+	//
+	///**
+	//* This is the name of the game's default resource that will be traded on the INVO exchange.
+	//* This field will require the Game Developer to instantiate an unsigned integer equivalent to the U.S Dollar
+	//* amount of how much their currency is evaluated at in the GAME_ID’s trading pair within their Pool_ID.
+	//**/
+	//UPROPERTY(config, EditAnywhere, Category = Settings)
+	//	FString Default_Currency;
+	//
+	///**
+	//* This will be a randomly generated unsigned integer.
+	//**/
+	//UPROPERTY(config, EditAnywhere, Category = Settings)
+	//	int32 Pool_ID;
+	//
+	//UPROPERTY(config, EditAnywhere, Category = Settings)
+	//	FInvoAssetData AssetData;
+	//
+	//UPROPERTY(config, EditAnywhere, Category = Settings)
+	//	FString Function_ID;
 
 	// Registration Info Fields
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Registration Info")

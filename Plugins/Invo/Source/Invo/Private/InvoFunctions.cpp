@@ -154,8 +154,8 @@ bool UInvoFunctions::InvoTestCall(const UObject* WorldContextObject, int32& OutM
 
 void UInvoFunctions::InvoTestCallBeta(const UObject* WorldContextObject)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Asset_ID: %s"), *AssetData.Asset_ID);
-	UE_LOG(LogTemp, Warning, TEXT("RDC: %s"), *AssetData.RDC);
+	//UE_LOG(LogTemp, Warning, TEXT("Asset_ID: %s"), *AssetData.Asset_ID);
+	//UE_LOG(LogTemp, Warning, TEXT("RDC: %s"), *AssetData.RDC);
 
 	//for (const auto& TokenPair : AssetData.TP)
 	//{
@@ -213,19 +213,20 @@ FInvoAssetData UInvoFunctions::GetInvoUserSettingsInput()
 	}
 
 	const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
-	UE_LOG(LogTemp, Warning, TEXT("Testing Game_ID fisrt %s"), *Settings->Game_ID)
+	FInvoAssetData AssetData;
+	//UE_LOG(LogTemp, Warning, TEXT("Testing Game_ID fisrt %s"), *Settings->Game_ID)
 
 
 		if (Settings)
 		{
-			FInvoAssetData AssetData = Settings->AssetData;
+			//FInvoAssetData AssetData = Settings->AssetData;
 			//UE_LOG(LogTemp, Warning, TEXT("Testing Game_ID %s"), *Settings->Game_ID)
 
 			return AssetData;
 			// Access the properties of AssetData...
 		}
 
-	return Settings->AssetData;
+	return AssetData;
 
 }
 
@@ -250,7 +251,8 @@ void UInvoFunctions::GetInvoFacts()
 	UE_LOG(LogTemp, Warning, TEXT("Jesus %s"), *SecretKey);
 
 	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
-	FString Asset_ID = Settings->AssetData.Asset_ID.Replace(TEXT(" "), TEXT("%20"));
+	//FString Asset_ID = Settings->AssetData.Asset_ID.Replace(TEXT(" "), TEXT("%20"));
+	FString Asset_ID = "";
 	FString SecreteKeyNormalizeString = SecretKey.Replace(TEXT(" "), TEXT("%20"));
 	FString Url = FString::Printf(TEXT("https://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s"), *Asset_ID, *SecreteKeyNormalizeString);
 	Request->SetURL(Url);
@@ -1110,9 +1112,10 @@ void UInvoFunctions::InvoAPIJsonReturnCall(const FString& City, FString& JsonDat
 
 	const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
 
-	FString Asset_ID = Settings->AssetData.Asset_ID.Replace(TEXT(" "), TEXT("%20"));
+	//FString Asset_ID = Settings->AssetData.Asset_ID.Replace(TEXT(" "), TEXT("%20"));
+	FString Asset_ID = "";
 
-	FString Url = FString::Printf(TEXT("https://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s"), *City.Replace(TEXT(" "), TEXT("%20")), *Settings->Game_ID);
+	FString Url = FString::Printf(TEXT("https://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s"), *City.Replace(TEXT(" "), TEXT("%20")), *UInvoFunctions::GetSecretsIniKeyValue("GameID"));
 
 	MakeHttpRequest(Url, TEXT("GET"), JsonData, [Callback](TSharedPtr<FJsonObject> JsonObject)
 		{
@@ -1133,7 +1136,6 @@ void UInvoFunctions::InvoAPIJsonReturn(const FString& Endpoint, FString& JsonDat
 {
 	FJsonObject JsonRespObject;
 
-	const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
 
 	MakeHttpRequest(Endpoint, TEXT("GET"), JsonData, [Callback](TSharedPtr<FJsonObject> JsonObject)
 		{
@@ -1355,7 +1357,9 @@ void UInvoFunctions::RegisterInvoGameDev(TFunction<void(const FString&)> OnRegis
 
 	// Extract settings and developer information
 	const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
-	auto DeveloperRegistrationInfo = Settings->DeveloperRegistrationInfo;
+	//auto DeveloperRegistrationInfo = Settings->DeveloperRegistrationInfo;
+	auto DeveloperRegistrationInfo = FInvoRegistrationInfo();
+
 
 	// Create a JSON object for the new user table fields
 	TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
@@ -1448,21 +1452,22 @@ void UInvoFunctions::TransferCurrency(int64 SourceGameID, int64 SourcePlayerID, 
 
 void UInvoFunctions:: TransferCurrency(int64 TargetGameID, int64 TargetPlayerID, int Amount, FString CurrencyName, const FString& Pin,  TFunction<void(const FString&)> OnTransferCompleted)
 {
-	const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
+	//const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
 	TMap<FString, FString> FormData;
 
-	if (Settings->Game_ID.IsEmpty())
+
+	if (CheckSecretsIni("GameId"))
 	{
-		FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Please Enter Your GameID in the Invo Plugins Game ID Feild")));
+		FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Please Enter Your GameID in the Secrets.Ini file in the Config Folder")));
 		return;
 	}
 
 	FString PlayerID = UInvoFunctions::GetSecretsIniKeyValue("PlayerID");
 	FString Skey = UInvoFunctions::GetSecretsIniKeyValue("SKeyCode");
-
+	FString Game_ID = UInvoFunctions::GetSecretsIniKeyValue("GameID");
 
 	FormData.Add(TEXT("from_player_id"), PlayerID);
-	FormData.Add(TEXT("from_game_id"), Settings->Game_ID);
+	FormData.Add(TEXT("from_game_id"), Game_ID);
 	if (!CheckSecretsIni("SKeyCode"))
 	{
 		FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("SKey Code is not Set in Ini File.")));
@@ -1633,18 +1638,19 @@ void UInvoFunctions::GetInvoCurrencyAmountForPlayer(int64 GameID, int64 PlayerID
 
 void UInvoFunctions::GetInvoCurrencyAmountForPlayer(TFunction<void(const FString&)> OnCurrencyAmountFetched)
 {
-	const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
+	//const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
 	TMap<FString, FString> FormData;
 
-	if (Settings->Game_ID.IsEmpty())
+	if (UInvoFunctions::GetSecretsIniKeyValue("GameID").IsEmpty())
 	{
-		FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Please Enter Your GameID in the Invo Plugins Game ID Feild")));
+		FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Please Enter Your GameID in the Secrets.ini File in your Config Project Config Folder")));
 		return;
 	}
 
 	FString PlayerID = UInvoFunctions::GetSecretsIniKeyValue("PlayerID");
+	FString Game_ID = UInvoFunctions::GetSecretsIniKeyValue("GameID");
 	FormData.Add(TEXT("player_id"), PlayerID);
-	FormData.Add(TEXT("game_id"), Settings->Game_ID);
+	FormData.Add(TEXT("game_id"), Game_ID);
 
 
 	// 3. Directly make the HTTP request without using UInvoFunctions.
@@ -2589,10 +2595,9 @@ bool UInvoFunctions::FillBPObjectFromJSON(const FString& JSONString, UObject* BP
 void UInvoFunctions::InvoGetCurrentBalance()
 {
 	FString CurrencyBalance;
-	const UInvoFunctions* SettingsBalance = GetDefault<UInvoFunctions>();
-	if (SettingsBalance->Game_ID.IsEmpty())
+	if (UInvoFunctions::GetSecretsIniKeyValue("GameID").IsEmpty())
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.0, FColor::Yellow, TEXT("Need to Set GameID in Invo Plugin Settings "));
+		GEngine->AddOnScreenDebugMessage(-1, 5.0, FColor::Yellow, TEXT("Need to Set GameID in Secrets.Ini in your Project Config Folder "));
 
 	}
 	else
@@ -2605,7 +2610,7 @@ void UInvoFunctions::InvoGetCurrentBalance()
 
 			FString PlayerID = UInvoFunctions::GetSecretsIniKeyValue("PlayerID");
 			FormData.Add(TEXT("player_id"), PlayerID);
-			FormData.Add(TEXT("game_id"), Settings->Game_ID);
+			FormData.Add(TEXT("game_id"), UInvoFunctions::GetSecretsIniKeyValue("GameID"));
 
 
 			// 3. Directly make the HTTP request without using UInvoFunctions.

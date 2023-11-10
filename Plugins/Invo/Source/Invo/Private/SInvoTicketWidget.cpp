@@ -138,12 +138,13 @@ FReply SInvoTicketWidget::OnSubmitClicked()
     TSharedPtr<FJsonObject> JsonObject = MakeShareable(new FJsonObject);
 
     // Settings from Invo SDK Feilds
-    const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
+    //const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
 
+    FString Game_ID = UInvoFunctions::GetSecretsIniKeyValue("GameID");
     TMap<FString, FString> FormData;
 
     FormData.Add(TEXT("player_id"), TEXT("2"));
-    FormData.Add(TEXT("game_id"), Settings->Game_ID);
+    FormData.Add(TEXT("game_id"), Game_ID);
     FormData.Add(TEXT("subject"), Subject);
     FormData.Add(TEXT("message_body"), Description);
     FormData.Add(TEXT("priority"), Priority);
