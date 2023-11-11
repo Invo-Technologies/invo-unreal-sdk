@@ -36,6 +36,7 @@ public class Invo : ModuleRules
                 "WebBrowser",
                 "WebBrowserWidget",
                 "Slate",
+                "Engine",
                 "SlateCore",
 				// ... add other public dependencies that you statically link with here ...
 			}
@@ -70,24 +71,24 @@ public class Invo : ModuleRules
 			);
 
         //string LibrariesPath = Path.Combine(ModuleDirectory, "../../Source/ThirdParty/jsoncpp/lib");
-        string ThirdPartyPath = Path.Combine(ModuleDirectory, "../../Source/ThirdParty");
+        //string ThirdPartyPath = Path.Combine(ModuleDirectory, "../../Source/ThirdParty");
 		//string OpenSSLPath = Path.Combine(ModuleDirectory, "../../Source/ThirdParty/OpenSSL");
 
         // Include path
-        PublicIncludePaths.Add(Path.Combine(ThirdPartyPath, "SQLite", "include"));
-        PublicIncludePaths.Add(Path.Combine(ThirdPartyPath, "OpenSSL", "include"));
+        //PublicIncludePaths.Add(Path.Combine(ThirdPartyPath, "SQLite", "include"));
+        //PublicIncludePaths.Add(Path.Combine(ThirdPartyPath, "OpenSSL", "include"));
 
 
 
         // Library path
-        string LibraryPath = Path.Combine(ThirdPartyPath, "SQLite", "lib", "SQLiteStaticLib.lib");
-        string JsonCppLibraryPath = Path.Combine(ThirdPartyPath, "OpenSSL", "lib", "libssl_static.lib");
+        //string LibraryPath = Path.Combine(ThirdPartyPath, "SQLite", "lib", "SQLiteStaticLib.lib");
+        //string JsonCppLibraryPath = Path.Combine(ThirdPartyPath, "OpenSSL", "lib", "libssl_static.lib");
 
 
         // Link the static library
-        PublicAdditionalLibraries.Add(LibraryPath);
+        //PublicAdditionalLibraries.Add(LibraryPath);
 
-        PublicAdditionalLibraries.Add(JsonCppLibraryPath);
+        //PublicAdditionalLibraries.Add(JsonCppLibraryPath);
 
         //PublicAdditionalLibraries.Add(Path.Combine(OpenSSLPath, "lib", "libcrypto_static.lib"));
         //PublicAdditionalLibraries.Add(Path.Combine(OpenSSLPath, "lib", "libssl_static.lib"));

@@ -285,22 +285,13 @@ struct FTicketData
  *
  */
  // NotBlueprintable, 
-UCLASS(config = Game)
+UCLASS()
 class INVO_API UInvoFunctions : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
 
 public:
-	/**
-	* public static UNetDebugStatsFunctions::GetMaxPacket
-	* Gets the maximum packet size. -1 if return value is false.
-	* @param OutMaxPacket [int32&] Maximum packet size.
-	* @return [bool] True if valid UNetConnection was found from PlayerController. False otherwise.
-	**/
-	UFUNCTION(BlueprintPure, Category = "Fun ", meta = (WorldContext = "WorldContextObject"))
-	static bool GetMaxPacket(const UObject* WorldContextObject, int32& OutMaxPacket);
-
-
+	
 	// Get the plugin version number
 	static FString GetInvoPluginVersion();
 
@@ -564,9 +555,9 @@ private:
 
 	void ExecuteOnGameThread(UObject* WorldContextObject);
 
-	static void HandleJavaScriptCallback(const FString& Message, TSharedPtr<SWebBrowser> WebBrowserWidget);
+	static void HandleJavaScriptCallback(const FString& Message, TSharedPtr<SWebBrowser> WebBrowserWidget, TSharedRef<SWindow> Window);
 
-	static void HandleJavaScriptTestCallback(const FString& Message, TSharedPtr<SWebBrowser> WebBrowserWidget);
+	static void HandleJavaScriptTestCallback(const FString& Message, TSharedPtr<SWebBrowser> WebBrowserWidget, TSharedRef<SWindow> Window);
 
 	static bool CloseWebBrowser(const FString& Message);
 
@@ -579,14 +570,12 @@ private:
 	static void SimulateAPICall(FOnInvoAPICallCompleted OnCompleted);
 
 
-	UFUNCTION()
-	static void HandleURLChange(const FString& NewUrl);
+	//UFUNCTION()
+	static void HandleURLChange(const FString& NewUrl, TSharedRef<SWindow>& Window, TSharedRef<SWebBrowser>& WebBrowser);
 
-	UFUNCTION()
-	static void OpenWebView(const FString& Url);
+	//UFUNCTION()
+	static void OpenWebView(const FString& Url, TSharedRef<SWindow>& Window, TSharedRef<SWebBrowser>& WebBrowser);
 
-	static TSharedRef<SWebBrowser> WebBrowser;
-	static TSharedRef<SWindow> Window;
 
 	static void GetInvoEthBlockNumber(TFunction<void(const FString&)> OnBlockNumberReceived);
 
@@ -598,16 +587,18 @@ private:
 
 	static void FetchCurrenciesForUser(int64 GameID, int64 PlayerID, TFunction<void(const TArray<FCurrencyData>&)> OnCurrenciesFetched);
 
-	static TSharedPtr<SInvoTicketWidget> InvoTicketWidget;
+	//static TSharedPtr<SInvoTicketWidget> InvoTicketWidget;
+	//
+	//static TSharedPtr<SInvoTransferWidget> InvoTransferWidget;
+	//
+	//static TSharedPtr<SInvoPurchaseWidget> InvoPurchaseWidget;
+	//
+	//static TSharedPtr<SInvoTradeWidget> InvoTradeWidget;
+	//
+	//static TSharedPtr<SKeyInputDialog> InvoSKeyInputDailogWidget;
 
-	static TSharedPtr<SInvoTransferWidget> InvoTransferWidget;
-
-	static TSharedPtr<SInvoPurchaseWidget> InvoPurchaseWidget;
-
-	static TSharedPtr<SInvoTradeWidget> InvoTradeWidget;
-
-	static TSharedPtr<SKeyInputDialog> InvoSKeyInputDailogWidget;
-
+	//static TSharedRef<SWebBrowser> WebBrowser;
+	//static TSharedRef<SWindow> Window;
 
 	// Helper Method for Extracting Code from HTML
 	static FString ExtractCodeFromHTMLSource(const FString& HtmlSource);

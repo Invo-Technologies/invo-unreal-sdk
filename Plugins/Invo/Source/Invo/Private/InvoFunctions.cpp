@@ -16,7 +16,7 @@
 
 #include "InvoHttpManager.h"
 #include "Runtime/Core/Public/Internationalization/Regex.h"
-#include "ThirdParty/SQLite/include/sqlite3.h"
+//#include "ThirdParty/SQLite/include/sqlite3.h"
 
 
 // UI Widgets 
@@ -103,12 +103,12 @@ namespace InvoPrivate
 
 
 // Initialize the static shared references
-TSharedRef<SWebBrowser> UInvoFunctions::WebBrowser = SNew(SWebBrowser);
-TSharedRef<SWindow> UInvoFunctions::Window = SNew(SWindow);
+//TSharedRef<SWebBrowser> UInvoFunctions::WebBrowser = SNew(SWebBrowser);
+//TSharedRef<SWindow> UInvoFunctions::Window = SNew(SWindow);
 
 //Ticket Support
-TSharedPtr<SInvoTicketWidget> UInvoFunctions::InvoTicketWidget;
-TSharedPtr<SInvoTransferWidget> UInvoFunctions::InvoTransferWidget;
+//TSharedPtr<SInvoTicketWidget> UInvoFunctions::InvoTicketWidget;
+//TSharedPtr<SInvoTransferWidget> UInvoFunctions::InvoTransferWidget;
 
 FString UInvoFunctions::CurrentBalance = TEXT(""); // Initialize the static variable
 //UInvoFunctions::FOnBalanceUpdated UInvoFunctions::OnBalanceUpdated;
@@ -130,17 +130,6 @@ void UInvoFunctions::PrintSDKVersionOnScreen()
 
 // Called when the game starts or when spawned
 
-bool UInvoFunctions::GetMaxPacket(const UObject* WorldContextObject, int32& OutMaxPacket)
-{
-	if (GET_CONNECTION)
-	{
-		OutMaxPacket = PlayerNetConnection->MaxPacket;
-		return true;
-	}
-
-	OutMaxPacket = INDEX_NONE;
-	return false;
-}
 
 
 bool UInvoFunctions::InvoTestCall(const UObject* WorldContextObject, int32& OutMaxPacket)
@@ -337,24 +326,24 @@ void UInvoFunctions::GetInvoFacts()
 }
 
 
-void UInvoFunctions::OpenWebView(const FString& Url)
+void UInvoFunctions::OpenWebView(const FString& Url, TSharedRef<SWindow>& Window, TSharedRef<SWebBrowser>& WebBrowser)
 {
 	const uint16 MajorVersion = FEngineVersion::Current().GetMajor();
 	// Check the version of Unreal Engine.
 	if (MajorVersion >= 5)
 	{
 		// Create a struct to hold the function parameters
-
+	
 		UWorld* World = GWorld->GetWorld();
-
+	
 		if (World)
 		{
-
+	
 			Window = SNew(SWindow)
 				.Title(FText::FromString(TEXT("Web Browser")))
 				.ClientSize(FVector2D(800, 600));
-
-
+	
+	
 			WebBrowser = SNew(SWebBrowser)
 				.ShowControls(true)
 				.ShowAddressBar(false)
@@ -367,18 +356,18 @@ void UInvoFunctions::OpenWebView(const FString& Url)
 				{
 					FString AuthCode = ExtractCodeFromUrl(NewUrl);
 					UInvoHttpManager::GetInstance()->SetAuthCode(AuthCode);
-
+	
 					//FString KeyString = TEXT("0123456789abcdef0123456789abcdef");
 					FString HexKeyString = TEXT("1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF1234567890ABCDEF"); // 64 hex characters
-
+	
 					FString EncryptDataAuthCode = EncryptData(AuthCode, HexKeyString);
 					UpdateSecretsIni("AuthCodeKey", EncryptDataAuthCode);
-
+	
 					UE_LOG(LogTemp, Warning, TEXT("AuthCode is %s"), *AuthCode);
 				}
-
+	
 				
-
+	
 				if (!CheckSecretsIni("PlayerID"))
 				{
 					// Create Player ID 
@@ -387,24 +376,24 @@ void UInvoFunctions::OpenWebView(const FString& Url)
 					FString Message = FString::Printf(TEXT("OnTransferClicked with ID %s"), *UniqueIDStr);
 					GEngine->AddOnScreenDebugMessage(1, 3.0, FColor::Green, Message);
 					UE_LOG(LogTemp, Warning, TEXT("This log message is from file %s on line %d"), TEXT(__FILE__), __LINE__);
-
+	
 					UInvoHttpManager::GetInstance()->CreatePlayerID(UniqueIDStr);
 				}
 			
-
-				HandleURLChange(NewUrl);
+	
+				HandleURLChange(NewUrl, Window, WebBrowser);
 				
 				
 				});
-
-
+	
+	
 			if (!Window->IsActive())
 			{
-				Window->SetContent(UInvoFunctions::WebBrowser);
+				Window->SetContent(WebBrowser);
 				FSlateApplication::Get().AddWindow(Window);
 				WebBrowser->LoadURL(Url);
 			}
-
+	
 		}
 		else
 		{
@@ -414,27 +403,27 @@ void UInvoFunctions::OpenWebView(const FString& Url)
 	}
 	else
 	{
-
+	
 		TSharedPtr<SWebBrowser> WebBrowserWidget = SNew(SWebBrowser)
 			.InitialURL(Url)
 			.ShowControls(false)
 			.ShowAddressBar(false);
-
+	
 		GEngine->GameViewport->AddViewportWidgetContent(
 			SNew(SWeakWidget).PossiblyNullContent(WebBrowserWidget.ToSharedRef())
 		);
-
+	
 		Window = SNew(SWindow)
 			.Title(FText::FromString(TEXT("Web Browser")))
 			.ClientSize(FVector2D(800, 600));
-
+	
 		WebBrowser = SNew(SWebBrowser)
 			.ShowControls(true)
 			.ShowAddressBar(false)
 			.OnUrlChanged_Lambda([](const FText& NewUrlText) {
 			FString NewUrl = NewUrlText.ToString();
 			// Handle URL changes here
-
+	
 			if (NewUrl.Contains(TEXT("buttonClicked"))) {
 				// Button on the website was clicked
 				FString Message = TEXT("Button Clicked!");
@@ -443,103 +432,103 @@ void UInvoFunctions::OpenWebView(const FString& Url)
 				GEngine->AddOnScreenDebugMessage(-1, Duration, Color, Message);
 			}
 				});
-
-		Window->SetContent(UInvoFunctions::WebBrowser);
+	
+		Window->SetContent(WebBrowser);
 		FSlateApplication::Get().AddWindow(Window);
-
+	
 		if (Url.IsEmpty())
 			WebBrowser->LoadURL(TEXT("http://localhost:5173/"));
 		else
 			WebBrowser->LoadURL(Url);
-
+	
 	}
 }
 
-void UInvoFunctions::HandleURLChange(const FString& NewUrl)
+void UInvoFunctions::HandleURLChange(const FString& NewUrl, TSharedRef<SWindow>& Window, TSharedRef<SWebBrowser>& WebBrowser)
 {
 	if (NewUrl.Contains(TEXT("closeButton"))) {
 		UE_LOG(LogTemp, Warning, TEXT("Close Button Clicked "));
-
+	
 		// Button on the website was clicked
 		FString Message = TEXT("closeButton  Clicked!");
 		float Duration = 5.0f;
 		FColor Color = FColor::Green;
 		GEngine->AddOnScreenDebugMessage(-1, Duration, Color, Message);
-
+	
 		// Access the game thread
 		FGraphEventRef Task = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
 			{
 				if (Window.ToSharedPtr().IsValid() && WebBrowser.ToSharedPtr().IsValid())
 				{
-					HandleJavaScriptCallback("closeButton", WebBrowser);
+					HandleJavaScriptCallback("closeButton", WebBrowser, Window);
 				}
 			}, TStatId(), nullptr, ENamedThreads::GameThread);
-
+	
 		// Access the game thread
 		FGraphEventRef Task_Render = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
 			{
 				// Perform game thread operations here
 				if (Window.ToSharedPtr().IsValid() && WebBrowser.ToSharedPtr().IsValid())
 				{
-
+	
 				}
 			}, TStatId(), nullptr, ENamedThreads::ActualRenderingThread);
 	}
 	else if (NewUrl.Contains(TEXT("PageA")))
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Button Clicked "));
-
+	
 		// Button on the website was clicked
 		FString Message = TEXT("Button Clicked!");
 		float Duration = 5.0f;
 		FColor Color = FColor::Green;
 		GEngine->AddOnScreenDebugMessage(-1, Duration, Color, Message);
-
-
+	
+	
 		// Access the game thread
 		FGraphEventRef Task = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
 			{
 				if (Window.ToSharedPtr().IsValid() && WebBrowser.ToSharedPtr().IsValid())
 				{
 					//HandleJavaScriptCallback("ButtonClicked", WebBrowser);
-					HandleJavaScriptTestCallback("PageA", WebBrowser);
+					HandleJavaScriptTestCallback("PageA", WebBrowser, Window);
 				}
-
-
+	
+	
 			}, TStatId(), nullptr, ENamedThreads::GameThread);
-
-
+	
+	
 		// Access the game thread
 		FGraphEventRef Task_Render = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
 			{
 				// Perform game thread operations here
 				if (Window.ToSharedPtr().IsValid() && WebBrowser.ToSharedPtr().IsValid())
 				{
-
+	
 				}
-
+	
 			}, TStatId(), nullptr, ENamedThreads::ActualRenderingThread);
 	}
 	else if (NewUrl.Contains(TEXT("PageB")))
 	{
-
+	
 		// Access the game thread
 		FGraphEventRef Task = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
 			{
 				if (Window.ToSharedPtr().IsValid() && WebBrowser.ToSharedPtr().IsValid())
 				{
 					//HandleJavaScriptCallback("ButtonClicked", WebBrowser);
-					HandleJavaScriptTestCallback("PageB", WebBrowser);
+					HandleJavaScriptTestCallback("PageB", WebBrowser, Window);
 				}
-
-
+	
+	
 			}, TStatId(), nullptr, ENamedThreads::GameThread);
-
-
+	
+	
 	}
 	else if (NewUrl.Contains(TEXT("Transfer_Completed")))
 	{
-
+	
 		// Access the game thread
 		FGraphEventRef Task = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
 			{
@@ -549,11 +538,11 @@ void UInvoFunctions::HandleURLChange(const FString& NewUrl)
 					//HandleJavaScriptTestCallback("Transfer", WebBrowser);
 					UInvoFunctions::bIsTransferCompleted = true;
 				}
-
-
+	
+	
 			}, TStatId(), nullptr, ENamedThreads::GameThread);
-
-
+	
+	
 	}
 	else if (NewUrl.Contains(TEXT("/external/auth/callback")))
 	{
@@ -567,26 +556,26 @@ void UInvoFunctions::HandleURLChange(const FString& NewUrl)
 					FSlateApplication::Get().RequestDestroyWindow(Window);
 				}
 			}, TStatId(), nullptr, ENamedThreads::GameThread);
-
-
+	
+	
 		/*
 		FString HtmlContent;
 		FString Url = TEXT("https://api.dev.ourinvo.com"); // Replace with your API endpoint URL
-
+	
 		TSharedRef<IHttpRequest, ESPMode::ThreadSafe> HttpRequest = FHttpModule::Get().CreateRequest();
 		HttpRequest->SetVerb(TEXT("GET"));
 		HttpRequest->SetURL(Url);
-
+	
 		HttpRequest->OnProcessRequestComplete().BindLambda([](FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful)
 			{
 				if (bWasSuccessful && Response.IsValid())
 				{
-
+	
 					FString HtmlContent = Response->GetContentAsString();
-
+	
 					// Now you have the HTML content in 'HtmlContent'
 					UE_LOG(LogTemp, Warning, TEXT("HTML Content: %s"), *HtmlContent);
-
+	
 					// Parse the HTML content and extract the 'code' value as shown in the previous response.
 				}
 				else
@@ -594,11 +583,11 @@ void UInvoFunctions::HandleURLChange(const FString& NewUrl)
 					UE_LOG(LogTemp, Error, TEXT("HTTP Request Failed"));
 				}
 			});
-
+	
 		HttpRequest->ProcessRequest();
-
+	
 		*/
-
+	
 		/*
 		
 		// Access the game thread
@@ -617,16 +606,16 @@ void UInvoFunctions::HandleURLChange(const FString& NewUrl)
 						// Extract the JSON string between '{' and '}'
 						int32 StartIndex = HtmlContent.FindChar('{', m);
 						int32 EndIndex = HtmlContent.FindLastChar('}', m);
-
+	
 						if (StartIndex != INDEX_NONE && EndIndex != INDEX_NONE)
 						{
 							JsonString = HtmlContent.Mid(StartIndex, EndIndex - StartIndex + 1);
-
+	
 							// Now you have the JSON string, which is: {"code":"4/0AfJohXlyZPD_fDU4yk10MWElowiN020oZF6rjVounr2EEc_4kpJ6WopKD1cMrSYI7Oubyg","message":"Code Saved"}
 						}
 					}
 					
-
+	
 					// Parse the JSON string
 					TSharedPtr<FJsonObject> JsonObject;
 					TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(JsonString);
@@ -639,19 +628,19 @@ void UInvoFunctions::HandleURLChange(const FString& NewUrl)
 							UE_LOG(LogTemp, Warning, TEXT("Code Value: %s"), *CodeValue);
 						}
 					}
-
+	
 				}
-
-
+	
+	
 			}, TStatId(), nullptr, ENamedThreads::GameThread);
-
+	
 		*/
 	}
 	else 
 	{
-
+	
 		UE_LOG(LogTemp, Warning, TEXT("None loop URL is %s"), *NewUrl);
-
+	
 	}
 	
 	// Add more conditions for other URL changes if needed
@@ -668,7 +657,10 @@ void UInvoFunctions::OpenInvoWebPage(UObject* WorldContextObject, FString Url = 
 	// React Local Sample Page Ui http://localhost:5173/
 	// Get the Unreal Engine version.
 	FString ReactWepPageUrl = "http://localhost:5173/";
-	OpenWebView(ReactWepPageUrl);
+	TSharedRef<SWindow> Window = SNew(SWindow);
+	TSharedRef<SWebBrowser> WebBrowser = SNew(SWebBrowser);
+	OpenWebView(ReactWepPageUrl, Window, WebBrowser);
+
 }
 
 void UInvoFunctions::OpenInvoInitWebPage()
@@ -678,7 +670,9 @@ void UInvoFunctions::OpenInvoInitWebPage()
 	// React Local Sample Page Ui http://localhost:5173/
 	// Get the Unreal Engine version.
 	FString ReactWepPageUrl = "https://api.dev.ourinvo.com/";
-	OpenWebView(ReactWepPageUrl);
+	TSharedRef<SWindow> Window = SNew(SWindow);
+	TSharedRef<SWebBrowser> WebBrowser = SNew(SWebBrowser);
+	OpenWebView(ReactWepPageUrl, Window, WebBrowser);
 }
 
 
@@ -697,7 +691,7 @@ void UInvoFunctions::ExecuteOnGameThread(UObject* WorldContextObject)
 }
 
 
-void UInvoFunctions::HandleJavaScriptCallback(const FString& Message, TSharedPtr<SWebBrowser> WebBrowserWidget)
+void UInvoFunctions::HandleJavaScriptCallback(const FString& Message, TSharedPtr<SWebBrowser> WebBrowserWidget, TSharedRef<SWindow> Window)
 {
 	// Call your function here using the provided parameters
 	// Make sure to access any game-related objects/components safely on the game thread
@@ -719,7 +713,7 @@ void UInvoFunctions::HandleJavaScriptCallback(const FString& Message, TSharedPtr
 }
 
 
-void UInvoFunctions::HandleJavaScriptTestCallback(const FString& Message, TSharedPtr<SWebBrowser> WebBrowserWidget)
+void UInvoFunctions::HandleJavaScriptTestCallback(const FString& Message, TSharedPtr<SWebBrowser> WebBrowserWidget, TSharedRef<SWindow> Window)
 {
 	// Call your function here using the provided parameters
 	// Make sure to access any game-related objects/components safely on the game thread
@@ -727,24 +721,24 @@ void UInvoFunctions::HandleJavaScriptTestCallback(const FString& Message, TShare
 	{
 		return; // Web browser widget is not valid, exit the function
 	}
-
+	
 	if (Message == "PageA")
 	{
 		// Handle the button click callback
 		UE_LOG(LogTemp, Log, TEXT("Received JavaScript callback: ButtonClicked"));
 		FString JsonData = TEXT("");
-
+	
 		InvoAPIJsonReturnCall(TEXT("London"), JsonData, [](TSharedPtr<FJsonObject> JsonObject)
 			{
 				// Do something with JsonObject
 				// This will be called when the HTTP request completes
-
+	
 				TArray<TSharedPtr<FJsonValue>> WeatherData = JsonObject->GetArrayField("weather");
 				for (int32 Index = 0; Index != WeatherData.Num(); ++Index)
 				{
 					// Get the weather object
 					TSharedPtr<FJsonObject> WeatherObject = WeatherData[Index]->AsObject();
-
+	
 					if (WeatherObject.IsValid())
 					{
 						FString Description = WeatherObject->GetStringField("description");
@@ -753,18 +747,18 @@ void UInvoFunctions::HandleJavaScriptTestCallback(const FString& Message, TShare
 						GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Green, Message);
 					}
 				}
-
+	
 			});
-
+	
 		// Access the game thread
 		FGraphEventRef Task = FFunctionGraphTask::CreateAndDispatchWhenReady([&]()
 			{
-				if (Window.ToSharedPtr().IsValid() && WebBrowser.ToSharedPtr().IsValid())
+				if (Window.ToSharedPtr().IsValid() && WebBrowserWidget.IsValid())
 				{
 					//FJsonObject JsonObject = InvoAPIJsonReturnCall();
-
+	
 				}
-
+	
 			}, TStatId(), nullptr, ENamedThreads::GameThread);
 	}
 	else if (Message == "PageB")
@@ -774,13 +768,13 @@ void UInvoFunctions::HandleJavaScriptTestCallback(const FString& Message, TShare
 			{
 				// Do something with JsonObject
 				// This will be called when the HTTP request completes
-
+	
 				TArray<TSharedPtr<FJsonValue>> WeatherData = JsonObject->GetArrayField("weather");
 				for (int32 Index = 0; Index != WeatherData.Num(); ++Index)
 				{
 					// Get the weather object
 					TSharedPtr<FJsonObject> WeatherObject = WeatherData[Index]->AsObject();
-
+	
 					if (WeatherObject.IsValid())
 					{
 						FString Description = WeatherObject->GetStringField("description");
@@ -789,9 +783,9 @@ void UInvoFunctions::HandleJavaScriptTestCallback(const FString& Message, TShare
 						GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Green, Message);
 					}
 				}
-
+	
 			});
-
+	
 	}
 	else if (Message == "auth")
 	{
@@ -800,13 +794,13 @@ void UInvoFunctions::HandleJavaScriptTestCallback(const FString& Message, TShare
 			{
 				// Do something with JsonObject
 				// This will be called when the HTTP request completes
-
+	
 				TArray<TSharedPtr<FJsonValue>> Data = JsonObject->GetArrayField("code");
 				for (int32 Index = 0; Index != Data.Num(); ++Index)
 				{
 					// Get the weather object
 					TSharedPtr<FJsonObject> DataObject = Data[Index]->AsObject();
-
+	
 					if (DataObject.IsValid())
 					{
 						FString Description = DataObject->GetStringField("code");
@@ -815,9 +809,9 @@ void UInvoFunctions::HandleJavaScriptTestCallback(const FString& Message, TShare
 						GEngine->AddOnScreenDebugMessage(-1, 4.0f, FColor::Green, Message);
 					}
 				}
-
+	
 			});
-
+	
 	}
 }
 
@@ -1738,7 +1732,9 @@ void UInvoFunctions::GetInvoCurrencyAmountForPlayerBP(const FOnCurrencyAmountFet
 void UInvoFunctions::InvoTransferCurrencyWebViewBP(FOnInvoAPICallCompleted OnTransferCompleted)
 {
 	FString Url = "http://localhost:5173/transfer";
-	OpenWebView(Url);
+	TSharedRef<SWindow> Window = SNew(SWindow);
+	TSharedRef<SWebBrowser> WebBrowser = SNew(SWebBrowser);
+	OpenWebView(Url, Window, WebBrowser);
 	OnTransferCompleted.ExecuteIfBound(UInvoFunctions::bIsTransferCompleted);
 
 }
@@ -1805,14 +1801,14 @@ void UInvoFunctions::InvoShowTicketWidget()
 {
 	// Create a Ticket Widget instance
 	
-	Window = SNew(SWindow)
+	TSharedRef<SWindow> Window = SNew(SWindow)
 		.Title(NSLOCTEXT("InvoTicket", "WindowTitle", "Invo Ticket System"))
 		.ClientSize(FVector2D(600, 500))
 		.SupportsMinimize(true)
 		.SupportsMaximize(true);
-
+	
 	Window->SetContent(SNew(SInvoTicketWidget));
-
+	
 	FSlateApplication::Get().AddWindow(Window);
 
 	
@@ -1834,26 +1830,26 @@ void UInvoFunctions::InvoShowTicketWidget()
 void UInvoFunctions::InvoShowGDPRWidget()
 {
 	// Create a GDPR Widget instance
-	Window = SNew(SWindow)
+	TSharedRef<SWindow>	Window = SNew(SWindow)
 		.Title(NSLOCTEXT("InvoGDPR", "WindowTitle", "Invo GDPR"))
 		.ClientSize(FVector2D(700, 200))
 		.SupportsMinimize(true)
 		.SupportsMaximize(true);
-
+	
 	Window->SetContent(SNew(SInvoGDPRWidget));
-
+	
 	FSlateApplication::Get().AddWindow(Window);
 }
 
 void UInvoFunctions::InvoShowSKeyInputDialog()
 {
 	// Create a GDPR Widget instance
-	Window = SNew(SWindow)
+	TSharedRef<SWindow>	Window = SNew(SWindow)
 		.Title(NSLOCTEXT("InvoSKey", "WindowTitle", "Invo Skey"))
 		.ClientSize(FVector2D(400, 120))
 		.SupportsMinimize(true)
 		.SupportsMaximize(true);
-
+	
 	Window->SetContent(SNew(SKeyInputDialog));
 	
 	FSlateApplication::Get().AddWindow(Window);
@@ -1862,12 +1858,12 @@ void UInvoFunctions::InvoShowSKeyInputDialog()
 void UInvoFunctions::InvoShowTransferWidget(const FOnCurrencyAmountFetchedBP& OnCurrencyAmountFetchedBP)
 {
 	// Create a InvoTransfer Widget instance
-	Window = SNew(SWindow)
+	TSharedRef<SWindow>	Window = SNew(SWindow)
 		.Title(NSLOCTEXT("InvoTransfer", "WindowTitle", "Invo Transfer System"))
 		.ClientSize(FVector2D(500, 500))
 		.SupportsMinimize(true)
 		.SupportsMaximize(true);
-
+	
 	Window->SetContent(SNew(SInvoTransferWidget).OnCurrencyAmountFetchedBP2(OnCurrencyAmountFetchedBP));
 	FSlateApplication::Get().AddWindow(Window);
 }
@@ -1875,12 +1871,12 @@ void UInvoFunctions::InvoShowTransferWidget(const FOnCurrencyAmountFetchedBP& On
 void UInvoFunctions::InvoShowPurchaseWidget()
 {
 	// Create a InvoTransfer Widget instance
-	Window = SNew(SWindow)
+	TSharedRef<SWindow>	Window = SNew(SWindow)
 		.Title(NSLOCTEXT("InvoPurchase", "WindowTitle", "Invo Purchase System"))
 		.ClientSize(FVector2D(800, 600))
 		.SupportsMinimize(true)
 		.SupportsMaximize(true);
-
+	
 	Window->SetContent(SNew(SInvoPurchaseWidget));
 	FSlateApplication::Get().AddWindow(Window);
 }
@@ -1888,12 +1884,13 @@ void UInvoFunctions::InvoShowPurchaseWidget()
 void UInvoFunctions::InvoShowTradeWidget()
 {
 	// Create a InvoTransfer Widget instance
-	Window = SNew(SWindow)
+	TSharedRef<SWindow>	Window = SNew(SWindow)
+
 		.Title(NSLOCTEXT("InvoTrade", "WindowTitle", "Invo Trade System"))
 		.ClientSize(FVector2D(500, 500))
 		.SupportsMinimize(true)
 		.SupportsMaximize(true);
-
+	
 	Window->SetContent(SNew(SInvoTradeWidget));
 	FSlateApplication::Get().AddWindow(Window);
 }
