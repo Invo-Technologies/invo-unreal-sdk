@@ -285,7 +285,7 @@ struct FTicketData
  *
  */
  // NotBlueprintable, 
-UCLASS()
+UCLASS(Config=Game)
 class INVO_API UInvoFunctions : public UBlueprintFunctionLibrary
 {
 	GENERATED_BODY()
@@ -297,33 +297,33 @@ public:
 
 
 	UFUNCTION(BlueprintCallable, Category = "Invo")
-		static void PrintSDKVersionOnScreen();
+	static void PrintSDKVersionOnScreen();
 
 	UInvoFunctions(const FObjectInitializer& ObjectInitializer);
 
-	//UPROPERTY(config, EditAnywhere, Category = Settings)
-	//bool Active = false;
-	//
-	///**
-	//* Applications ID or Account_ID
-	//* @param OutMaxPacket [int32&] Maximum packet size.
-	//**/
-	//UPROPERTY(config, EditAnywhere, Category = Settings)
-	//FString Account_ID;
-	//
-	///**
-	//* Applications ID or Game_ID
-	//**/
-	//UPROPERTY(config, EditAnywhere, Category = Settings)
-	//FString Game_ID;
-	//
-	///**
-	//* Applications ID or Player_ID
-	//**/
-	//
-	//UPROPERTY(config, EditAnywhere, Category = Settings)
-	//FString Player_ID;
-	//
+	UPROPERTY(config, EditAnywhere, Category = Settings)
+	bool Active = false;
+	
+	/**
+	* Applications ID or Account_ID
+	* @param OutMaxPacket [int32&] Maximum packet size.
+	**/
+	UPROPERTY(config, EditAnywhere, Category = Settings)
+	FString Account_ID;
+	
+	/**
+	* Applications ID or Game_ID
+	**/
+	UPROPERTY(config, EditAnywhere, Category = Settings)
+	FString Game_ID;
+	
+	/**
+	* Applications ID or Player_ID
+	**/
+	
+	UPROPERTY(config, EditAnywhere, Category = Settings)
+	FString Player_ID;
+	
 	///**
 	//* Applications ID or PlayerGmail
 	//**/
@@ -371,11 +371,11 @@ public:
 
 	// Registration Info Fields
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Registration Info")
-		FInvoRegistrationInfo DeveloperRegistrationInfo;
+	FInvoRegistrationInfo DeveloperRegistrationInfo;
 
 	// Credit Card Info Field
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Devoloper Credit Card Info")
-		FInvoCreditCardInfo CreditCardInfo;
+	FInvoCreditCardInfo CreditCardInfo;
 
 
 	UFUNCTION(BlueprintPure, Category = "Invo ", meta = (WorldContext = "WorldContextObject"))
