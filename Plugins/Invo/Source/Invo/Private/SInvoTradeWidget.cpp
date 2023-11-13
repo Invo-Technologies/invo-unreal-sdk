@@ -216,7 +216,7 @@ FReply SInvoTradeWidget::OnTradeClicked()
 {
     
     // Settings from Invo SDK Feilds
-    //const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
+    const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
     
     /*
     // 1. Get the text from each of the UI fields.

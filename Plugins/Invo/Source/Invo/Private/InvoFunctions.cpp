@@ -143,17 +143,17 @@ bool UInvoFunctions::InvoTestCall(const UObject* WorldContextObject, int32& OutM
 
 void UInvoFunctions::InvoTestCallBeta(const UObject* WorldContextObject)
 {
-	//UE_LOG(LogTemp, Warning, TEXT("Asset_ID: %s"), *AssetData.Asset_ID);
-	//UE_LOG(LogTemp, Warning, TEXT("RDC: %s"), *AssetData.RDC);
-
+	UE_LOG(LogTemp, Warning, TEXT("Asset_ID: %s"), *AssetData.Asset_ID);
+	UE_LOG(LogTemp, Warning, TEXT("RDC: %s"), *AssetData.RDC);
+	
 	//for (const auto& TokenPair : AssetData.TP)
 	//{
 	//	//FString TokenPairString = ENUM_TO_STRING(ETokenPair, TokenPair); // Assume there's a function for this
 	//	//UE_LOG(LogTemp, Warning, TEXT("Token Pair: %s"), *TokenPairString);
 	//	
 	//}
-
-}
+	//
+}	//
 
 class UNetConnection* UInvoFunctions::Internal_GetNetConnection(const UObject* WorldContextObject)
 {
@@ -202,20 +202,19 @@ FInvoAssetData UInvoFunctions::GetInvoUserSettingsInput()
 	}
 
 	const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
-	FInvoAssetData AssetData;
-	//UE_LOG(LogTemp, Warning, TEXT("Testing Game_ID fisrt %s"), *Settings->Game_ID)
+	UE_LOG(LogTemp, Warning, TEXT("Testing Game_ID fisrt %s"), *Settings->Game_ID)
 
 
 		if (Settings)
 		{
-			//FInvoAssetData AssetData = Settings->AssetData;
-			//UE_LOG(LogTemp, Warning, TEXT("Testing Game_ID %s"), *Settings->Game_ID)
+			FInvoAssetData AssetData = Settings->AssetData;
+			UE_LOG(LogTemp, Warning, TEXT("Testing Game_ID %s"), *Settings->Game_ID)
 
 			return AssetData;
 			// Access the properties of AssetData...
 		}
 
-	return AssetData;
+	return Settings->AssetData;
 
 }
 
@@ -240,8 +239,7 @@ void UInvoFunctions::GetInvoFacts()
 	UE_LOG(LogTemp, Warning, TEXT("Jesus %s"), *SecretKey);
 
 	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = FHttpModule::Get().CreateRequest();
-	//FString Asset_ID = Settings->AssetData.Asset_ID.Replace(TEXT(" "), TEXT("%20"));
-	FString Asset_ID = "";
+	FString Asset_ID = Settings->AssetData.Asset_ID.Replace(TEXT(" "), TEXT("%20"));
 	FString SecreteKeyNormalizeString = SecretKey.Replace(TEXT(" "), TEXT("%20"));
 	FString Url = FString::Printf(TEXT("https://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s"), *Asset_ID, *SecreteKeyNormalizeString);
 	Request->SetURL(Url);
@@ -1106,8 +1104,8 @@ void UInvoFunctions::InvoAPIJsonReturnCall(const FString& City, FString& JsonDat
 
 	const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
 
-	//FString Asset_ID = Settings->AssetData.Asset_ID.Replace(TEXT(" "), TEXT("%20"));
-	FString Asset_ID = "";
+	FString Asset_ID = Settings->AssetData.Asset_ID.Replace(TEXT(" "), TEXT("%20"));
+	//FString Asset_ID = "";
 
 	FString Url = FString::Printf(TEXT("https://api.openweathermap.org/data/2.5/weather?q=%s&appid=%s"), *City.Replace(TEXT(" "), TEXT("%20")), *UInvoFunctions::GetSecretsIniKeyValue("GameID"));
 
@@ -1130,6 +1128,7 @@ void UInvoFunctions::InvoAPIJsonReturn(const FString& Endpoint, FString& JsonDat
 {
 	FJsonObject JsonRespObject;
 
+	const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
 
 	MakeHttpRequest(Endpoint, TEXT("GET"), JsonData, [Callback](TSharedPtr<FJsonObject> JsonObject)
 		{
@@ -1351,8 +1350,8 @@ void UInvoFunctions::RegisterInvoGameDev(TFunction<void(const FString&)> OnRegis
 
 	// Extract settings and developer information
 	const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
-	//auto DeveloperRegistrationInfo = Settings->DeveloperRegistrationInfo;
-	auto DeveloperRegistrationInfo = FInvoRegistrationInfo();
+	auto DeveloperRegistrationInfo = Settings->DeveloperRegistrationInfo;
+	//auto DeveloperRegistrationInfo = FInvoRegistrationInfo();
 
 
 	// Create a JSON object for the new user table fields
@@ -1446,14 +1445,20 @@ void UInvoFunctions::TransferCurrency(int64 SourceGameID, int64 SourcePlayerID, 
 
 void UInvoFunctions:: TransferCurrency(int64 TargetGameID, int64 TargetPlayerID, int Amount, FString CurrencyName, const FString& Pin,  TFunction<void(const FString&)> OnTransferCompleted)
 {
-	//const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
+	const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
 	TMap<FString, FString> FormData;
 
 
+	if (Settings->Game_ID.IsEmpty())
+	{
+		FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Please Enter Your GameID in the Invo Plugins Game ID Feild")));
+		return;
+	}
+
 	if (CheckSecretsIni("GameId"))
 	{
-		FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Please Enter Your GameID in the Secrets.Ini file in the Config Folder")));
-		return;
+		//FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Please Enter Your GameID in the Secrets.Ini file in the Config Folder")));
+		//return;
 	}
 
 	FString PlayerID = UInvoFunctions::GetSecretsIniKeyValue("PlayerID");
@@ -1461,7 +1466,7 @@ void UInvoFunctions:: TransferCurrency(int64 TargetGameID, int64 TargetPlayerID,
 	FString Game_ID = UInvoFunctions::GetSecretsIniKeyValue("GameID");
 
 	FormData.Add(TEXT("from_player_id"), PlayerID);
-	FormData.Add(TEXT("from_game_id"), Game_ID);
+	FormData.Add(TEXT("from_game_id"), Settings->Game_ID);
 	if (!CheckSecretsIni("SKeyCode"))
 	{
 		FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("SKey Code is not Set in Ini File.")));
@@ -1632,19 +1637,25 @@ void UInvoFunctions::GetInvoCurrencyAmountForPlayer(int64 GameID, int64 PlayerID
 
 void UInvoFunctions::GetInvoCurrencyAmountForPlayer(TFunction<void(const FString&)> OnCurrencyAmountFetched)
 {
-	//const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
+	const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
 	TMap<FString, FString> FormData;
 
-	if (UInvoFunctions::GetSecretsIniKeyValue("GameID").IsEmpty())
+	if (Settings->Game_ID.IsEmpty())
 	{
-		FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Please Enter Your GameID in the Secrets.ini File in your Config Project Config Folder")));
+		FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Please Enter Your GameID in the Invo Plugins Game ID Feild")));
 		return;
 	}
+
+	//if (UInvoFunctions::GetSecretsIniKeyValue("GameID").IsEmpty())
+	//{
+	//	FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(TEXT("Please Enter Your GameID in the Secrets.ini File in your Config Project Config Folder")));
+	//	return;
+	//}
 
 	FString PlayerID = UInvoFunctions::GetSecretsIniKeyValue("PlayerID");
 	FString Game_ID = UInvoFunctions::GetSecretsIniKeyValue("GameID");
 	FormData.Add(TEXT("player_id"), PlayerID);
-	FormData.Add(TEXT("game_id"), Game_ID);
+	FormData.Add(TEXT("game_id"), Settings->Game_ID);
 
 
 	// 3. Directly make the HTTP request without using UInvoFunctions.
@@ -2592,9 +2603,12 @@ bool UInvoFunctions::FillBPObjectFromJSON(const FString& JSONString, UObject* BP
 void UInvoFunctions::InvoGetCurrentBalance()
 {
 	FString CurrencyBalance;
-	if (UInvoFunctions::GetSecretsIniKeyValue("GameID").IsEmpty())
+	const UInvoFunctions* SettingsBalance = GetDefault<UInvoFunctions>();
+	if (SettingsBalance->Game_ID.IsEmpty())
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 5.0, FColor::Yellow, TEXT("Need to Set GameID in Secrets.Ini in your Project Config Folder "));
+		//GEngine->AddOnScreenDebugMessage(-1, 5.0, FColor::Yellow, TEXT("Need to Set GameID in Secrets.Ini in your Project Config Folder "));
+		GEngine->AddOnScreenDebugMessage(-1, 5.0, FColor::Yellow, TEXT("Need to Set GameID in Invo Plugin Settings "));
+		return;
 
 	}
 	else
@@ -2607,7 +2621,7 @@ void UInvoFunctions::InvoGetCurrentBalance()
 
 			FString PlayerID = UInvoFunctions::GetSecretsIniKeyValue("PlayerID");
 			FormData.Add(TEXT("player_id"), PlayerID);
-			FormData.Add(TEXT("game_id"), UInvoFunctions::GetSecretsIniKeyValue("GameID"));
+			FormData.Add(TEXT("game_id"), Settings->Game_ID);
 
 
 			// 3. Directly make the HTTP request without using UInvoFunctions.
@@ -2714,6 +2728,30 @@ void UInvoFunctions::HandleHttpResponse(bool bWasSuccessful, const FString& Resp
 		// Handle failure.
 		UE_LOG(LogTemp, Error, TEXT("Failure: %s"), *ResponseContent);
 	}
+}
+
+void UInvoFunctions::CreateBrowserWidget()
+{
+
+	if (GEngine && GEngine->GameViewport)
+	{
+		// Create and configure your web browser widget
+		TSharedPtr<SWebBrowser> WebBrowserWidget = SNew(SWebBrowser)
+			.InitialURL(TEXT("https://www.createlex.com"))
+			.ShowControls(true)
+			.SupportsTransparency(true);
+
+		// Add the widget to the game's viewport
+		GEngine->GameViewport->AddViewportWidgetContent(
+			SNew(SBox)
+			.WidthOverride(800)  // Set the desired width
+			.HeightOverride(600) // Set the desired height
+			[
+				WebBrowserWidget.ToSharedRef()
+			]
+		);
+	}
+
 }
 
 

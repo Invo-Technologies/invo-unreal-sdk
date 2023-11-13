@@ -258,14 +258,14 @@ FReply SInvoTransferWidget::OnTransferClicked()
     if (UInvoFunctions::CheckSecretsIni("PlayerID"))
     {
        
-       // const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
-        FString Game_ID = UInvoFunctions::GetSecretsIniKeyValue("GameID");
+        const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
+        //FString Game_ID = UInvoFunctions::GetSecretsIniKeyValue("GameID");
         TMap<FString, FString> FormData;
         
         FString PlayerID = UInvoFunctions::GetSecretsIniKeyValue("PlayerID");
         FString SKey = UInvoFunctions::GetSecretsIniKeyValue("SKeyCode");
         FormData.Add(TEXT("from_player_id"), PlayerID);
-        FormData.Add(TEXT("from_game_id"), Game_ID);
+        FormData.Add(TEXT("from_game_id"), Settings->Game_ID);
         FormData.Add(TEXT("to_player_id"), TargetPlayerIDTextBox->GetText().ToString());
         FormData.Add(TEXT("to_game_id"), FString::FromInt(CurrentGame->GameID));
         FormData.Add(TEXT("amount"), DefaultCurrencyAmountTextBox->GetText().ToString());
@@ -490,15 +490,15 @@ void SInvoTransferWidget::FetchGameInFromAPI()
 
 
     UWorld* World = GWorld->GetWorld();
-    //const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
-    FString Player_ID = UInvoFunctions::GetSecretsIniKeyValue("PlayerID");
+    const UInvoFunctions* Settings = GetDefault<UInvoFunctions>();
+    //FString Player_ID = UInvoFunctions::GetSecretsIniKeyValue("PlayerID");
 
     if (World)
     {
 
-        if (!Player_ID.IsEmpty())
+        if (!Settings->Player_ID.IsEmpty())
         {
-            UE_LOG(LogTemp, Warning, TEXT("Player %s is already registered"), *Player_ID);
+            UE_LOG(LogTemp, Warning, TEXT("Player %s is already registered"), *Settings->Player_ID);
             //return;
         }
 

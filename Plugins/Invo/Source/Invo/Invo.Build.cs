@@ -32,7 +32,6 @@ public class Invo : ModuleRules
                 "Json",
                 "JsonUtilities",
                 "HTTP",
-                "UMG",
                 "WebBrowser",
                 "WebBrowserWidget",
                 "Slate",
@@ -56,7 +55,6 @@ public class Invo : ModuleRules
                 "Json",
                 "HTTP",
                 "WebBrowser",
-                "UMG",
                 "WebBrowserWidget",
 				// ... add private dependencies that you statically link with here ...	
 			}

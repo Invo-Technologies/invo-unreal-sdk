@@ -324,50 +324,50 @@ public:
 	UPROPERTY(config, EditAnywhere, Category = Settings)
 	FString Player_ID;
 	
-	///**
-	//* Applications ID or PlayerGmail
-	//**/
-	//UPROPERTY(config, EditAnywhere, Category = Settings)
-	//FString PlayerEmail;
-	//
-	///**
-	//* Applications ID or PlayerName
-	//**/
-	//
-	//UPROPERTY(config, EditAnywhere, Category = Settings)
-	//FString PlayerName;
-	//
-	//
-	//
-	//
-	///**
-	//* BabeNod
-	//* Choose the primary (IN) RPC: this is the INVO Babe Node responsible for RPC and API requests between Game Server and Origin Node.
-	//* INVO Babe Node = Default
-	//* INVO Babe Node = Sandbox
-	//**/
-	//UPROPERTY(config, EditAnywhere, Category = Settings)
-	//	EBabeNodeSetting Node;
-	//
-	///**
-	//* This is the name of the game's default resource that will be traded on the INVO exchange.
-	//* This field will require the Game Developer to instantiate an unsigned integer equivalent to the U.S Dollar
-	//* amount of how much their currency is evaluated at in the GAME_ID’s trading pair within their Pool_ID.
-	//**/
-	//UPROPERTY(config, EditAnywhere, Category = Settings)
-	//	FString Default_Currency;
-	//
-	///**
-	//* This will be a randomly generated unsigned integer.
-	//**/
-	//UPROPERTY(config, EditAnywhere, Category = Settings)
-	//	int32 Pool_ID;
-	//
-	//UPROPERTY(config, EditAnywhere, Category = Settings)
-	//	FInvoAssetData AssetData;
-	//
-	//UPROPERTY(config, EditAnywhere, Category = Settings)
-	//	FString Function_ID;
+	/**
+	* Applications ID or PlayerGmail
+	**/
+	UPROPERTY(config, EditAnywhere, Category = Settings)
+	FString PlayerEmail;
+	
+	/**
+	* Applications ID or PlayerName
+	**/
+	
+	UPROPERTY(config, EditAnywhere, Category = Settings)
+	FString PlayerName;
+	
+	
+	
+	
+	/**
+	* BabeNod
+	* Choose the primary (IN) RPC: this is the INVO Babe Node responsible for RPC and API requests between Game Server and Origin Node.
+	* INVO Babe Node = Default
+	* INVO Babe Node = Sandbox
+	**/
+	UPROPERTY(config, EditAnywhere, Category = Settings)
+		EBabeNodeSetting Node;
+	
+	/**
+	* This is the name of the game's default resource that will be traded on the INVO exchange.
+	* This field will require the Game Developer to instantiate an unsigned integer equivalent to the U.S Dollar
+	* amount of how much their currency is evaluated at in the GAME_ID’s trading pair within their Pool_ID.
+	**/
+	UPROPERTY(config, EditAnywhere, Category = Settings)
+		FString Default_Currency;
+	
+	/**
+	* This will be a randomly generated unsigned integer.
+	**/
+	UPROPERTY(config, EditAnywhere, Category = Settings)
+		int32 Pool_ID;
+	
+	UPROPERTY(config, EditAnywhere, Category = Settings)
+		FInvoAssetData AssetData;
+	
+	UPROPERTY(config, EditAnywhere, Category = Settings)
+		FString Function_ID;
 
 	// Registration Info Fields
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Registration Info")
@@ -473,6 +473,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Invo")
 	static void InvoShowSKeyInputDialog();
 	
+	UFUNCTION(BlueprintCallable, Category = "Invo")
+	static void CreateBrowserWidget();
 
 	// Used to call for any UI Class
 	static void MakeHttpRequest(const FString& Url, const FString& HttpMethod, const FString& Content, TFunction<void(const bool, const FString&)> Callback);
