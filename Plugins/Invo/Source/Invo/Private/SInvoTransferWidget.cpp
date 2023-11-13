@@ -368,6 +368,7 @@ FReply SInvoTransferWidget::OnTransferClicked()
                         PlayerController->bEnableClickEvents = false;
                         PlayerController->bEnableMouseOverEvents = false;
                     }
+                    CloseTicketWidget();
                 }
                 else
                 {
