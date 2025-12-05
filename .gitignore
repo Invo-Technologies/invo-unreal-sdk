@@ -1,0 +1,30 @@
+# Unreal Engine generated files
+Intermediate/
+DerivedDataCache/
+Saved/
+
+# Binary files (too large for git, rebuild locally)
+Binaries/
+
+# Visual Studio files
+.vs/
+*.sln
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# JetBrains Rider
+.idea/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Build artifacts
+*.pdb
+*.lib
+*.exp
