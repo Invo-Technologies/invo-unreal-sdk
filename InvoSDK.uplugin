@@ -1,0 +1,24 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "InvoSDK",
+	"Description": "Official Unreal Engine SDK for the Invo platform - enabling in-game currency management, item purchases, and player-to-player transfers.",
+	"Category": "Other",
+	"CreatedBy": "Invo Technologies",
+	"CreatedByURL": "https://invo.network",
+	"DocsURL": "https://docs.invo.network",
+	"MarketplaceURL": "",
+	"SupportURL": "https://discord.gg/TDRxuVTU",
+	"CanContainContent": true,
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "InvoSDK",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	]
+}
