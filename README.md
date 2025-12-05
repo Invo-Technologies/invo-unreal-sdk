@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://invo.network/logo.png" alt="InvoSDK Logo" width="200"/>
+  <img src="https://console.invo.network/assets/logo-e0324218.svg" alt="InvoSDK Logo" width="200"/>
 </p>
 
 <h1 align="center">InvoSDK for Unreal Engine</h1>
