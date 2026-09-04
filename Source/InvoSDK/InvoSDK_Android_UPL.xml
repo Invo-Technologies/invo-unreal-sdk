@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  InvoSDK Unreal Plugin Language (UPL) for Android.
+
+  Registers the hosted-approval return scheme `invo-sdk-<GameId>` on the game activity so the
+  system browser can hand control back after the passkey ceremony. GameId is read from
+  DefaultEngine.ini [/Script/InvoSDK.InvoSDKSettings] (Project Settings > Plugins > Invo SDK).
+  The return URL carries nothing; the game polls its own server on wake-up.
+-->
+<root xmlns:android="http://schemas.android.com/apk/res/android">
+  <init>
+    <setStringFromProperty result="InvoGameId" ini="Engine" section="/Script/InvoSDK.InvoSDKSettings" property="GameId" default=""/>
+    <setBoolIsEqual result="bInvoGameIdEmpty" arg1="$S(InvoGameId)" arg2=""/>
+    <if condition="bInvoGameIdEmpty">
+      <true>
+        <log text="InvoSDK: GameId is not set (Project Settings > Plugins > Invo SDK); the hosted-approval return scheme was NOT registered."/>
+      </true>
+      <false>
+        <log text="InvoSDK: registering hosted-approval return scheme invo-sdk-$S(InvoGameId)"/>
+      </false>
+    </if>
+  </init>
+
+  <androidManifestUpdates>
+    <if condition="bInvoGameIdEmpty">
+      <false>
+        <loopElements tag="activity">
+          <setStringFromAttribute result="InvoActivityName" tag="$" name="android:name"/>
+          <setBoolIsEqual result="bInvoIsUe5Activity" arg1="$S(InvoActivityName)" arg2="com.epicgames.unreal.GameActivity"/>
+          <setBoolIsEqual result="bInvoIsUe4Activity" arg1="$S(InvoActivityName)" arg2="com.epicgames.ue4.GameActivity"/>
+          <setBoolOr result="bInvoIsGameActivity" arg1="$B(bInvoIsUe5Activity)" arg2="$B(bInvoIsUe4Activity)"/>
+          <if condition="bInvoIsGameActivity">
+            <true>
+              <setElement result="InvoIntentFilter" value="intent-filter"/>
+
+              <setElement result="InvoViewAction" value="action"/>
+              <addAttribute tag="$InvoViewAction" name="android:name" value="android.intent.action.VIEW"/>
+              <addElement tag="$InvoIntentFilter" name="InvoViewAction"/>
+
+              <setElement result="InvoDefaultCategory" value="category"/>
+              <addAttribute tag="$InvoDefaultCategory" name="android:name" value="android.intent.category.DEFAULT"/>
+              <addElement tag="$InvoIntentFilter" name="InvoDefaultCategory"/>
+
+              <setElement result="InvoBrowsableCategory" value="category"/>
+              <addAttribute tag="$InvoBrowsableCategory" name="android:name" value="android.intent.category.BROWSABLE"/>
+              <addElement tag="$InvoIntentFilter" name="InvoBrowsableCategory"/>
+
+              <setElement result="InvoSchemeData" value="data"/>
+              <addAttribute tag="$InvoSchemeData" name="android:scheme" value="invo-sdk-$S(InvoGameId)"/>
+              <addElement tag="$InvoIntentFilter" name="InvoSchemeData"/>
+
+              <addElement tag="$" name="InvoIntentFilter"/>
+            </true>
+          </if>
+        </loopElements>
+      </false>
+    </if>
+  </androidManifestUpdates>
+</root>

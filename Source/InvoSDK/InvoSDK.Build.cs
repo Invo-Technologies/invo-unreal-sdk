@@ -1,5 +1,6 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 
+using System.IO;
 using UnrealBuildTool;
 
 public class InvoSDK : ModuleRules
@@ -7,6 +8,14 @@ public class InvoSDK : ModuleRules
 	public InvoSDK(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
+
+		// Hosted approval on Android: the UPL registers the `invo-sdk-<GameId>` return scheme
+		// (an intent-filter on the game activity) so the system browser can hand control back.
+		if (Target.Platform == UnrealTargetPlatform.Android)
+		{
+			string PluginPath = Utils.MakePathRelativeTo(ModuleDirectory, Target.RelativeEnginePath);
+			AdditionalPropertiesForReceipt.Add("AndroidPlugin", Path.Combine(PluginPath, "InvoSDK_Android_UPL.xml"));
+		}
 		
 		PublicIncludePaths.AddRange(
 			new string[] {
@@ -28,7 +37,8 @@ public class InvoSDK : ModuleRules
 				"Core",
                 "HTTP",            
                 "Json",            
-                "JsonUtilities"
+                "JsonUtilities",
+                "DeveloperSettings"   // UInvoSDKSettings: Public/InvoSDKSettings.h includes Engine/DeveloperSettings.h
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
