@@ -562,52 +562,13 @@ UnrealEditor-Cmd.exe <Project>.uproject -ExecCmds="Automation RunTests InvoSDK.H
 
 ## Common Integration Patterns
 
-### Authentication Flow
+### Authentication
 
-```
-┌─────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  User   │     │  Your Game  │     │  InvoSDK    │     │  Invo API   │
-└────┬────┘     └──────┬──────┘     └──────┬──────┘     └──────┬──────┘
-     │                 │                   │                   │
-     │  Login Request  │                   │                   │
-     │────────────────▶│                   │                   │
-     │                 │                   │                   │
-     │                 │  POST /auth/login │                   │
-     │                 │──────────────────▶│                   │
-     │                 │                   │                   │
-     │                 │                   │  HTTPS Request    │
-     │                 │                   │──────────────────▶│
-     │                 │                   │                   │
-     │                 │                   │  Access Token     │
-     │                 │                   │◀──────────────────│
-     │                 │                   │                   │
-     │                 │  OnSuccess        │                   │
-     │                 │◀──────────────────│                   │
-     │                 │                   │                   │
-     │                 │  GET /auth/csrf   │                   │
-     │                 │──────────────────▶│                   │
-     │                 │                   │──────────────────▶│
-     │                 │                   │◀──────────────────│
-     │                 │◀──────────────────│                   │
-     │                 │                   │                   │
-     │  Login Success  │                   │                   │
-     │◀────────────────│                   │                   │
-     │                 │                   │                   │
-```
+Your game authenticates with its **SDK key** (`sdkKey` in `InvoSDKConfig`), sent as the `X-Game-Secret-Key` header. Calls made for one player can instead carry a short-lived player token (`Authorization: Bearer <token>`) that your server mints with `POST /api/sdk/player-token`. There is no login step and no CSRF token: players never sign in to Invo from your game.
 
-### Example: Complete Login Flow (Blueprint)
+`/auth/login` is the Invo developer console's own sign-in. It needs a browser check and a second step, so a game or script cannot use it. Do not call it from your game.
 
-1. **Login Request**
-   - Endpoint: `POST /sandbox/auth/login`
-   - Body: `{"email": "player@example.com", "password": "..."}`
-
-2. **Get CSRF Token**
-   - Endpoint: `GET /sandbox/auth/csrf-token`
-   - Store the token for subsequent requests
-
-3. **Make Authenticated Requests**
-   - Include `Authorization: Bearer <access_token>` header
-   - Include `X-CSRF-Token: <csrf_token>` header for mutations
+Keep the SDK key on your server in production builds (see the security warning under **Configure the SDK**).
 
 ### Example: Item Purchase Flow (C++)
 
@@ -625,8 +586,7 @@ void AStoreManager::PurchaseItem(const FString& ItemId, int32 Quantity)
 
     // Configure headers
     TMap<FString, FString> Headers;
-    Headers.Add(TEXT("Authorization"), TEXT("Bearer ") + AccessToken);
-    Headers.Add(TEXT("X-CSRF-Token"), CSRFToken);
+    Headers.Add(TEXT("X-Game-Secret-Key"), SdkKey);   // from your server, never shipped in the client
 
     // Make request
     UInvoSDKApiManager* Request = UInvoSDKApiManager::InvoRequest(
@@ -655,8 +615,8 @@ void AStoreManager::PurchaseItem(const FString& ItemId, int32 Quantity)
 | "Config not found!" | `InvoSDKConfig` asset missing or not loaded | Ensure the config asset exists in your project and is properly referenced |
 | "Player email not set!" | Empty `playerEmail` in config | Set the player's email in `InvoSDKConfig` or pass it directly to API calls |
 | Request timeout | Network issues or incorrect endpoint | Verify network connectivity and endpoint URLs |
-| 401 Unauthorized | Invalid or expired token | Re-authenticate and obtain a fresh access token |
-| 403 Forbidden | Missing CSRF token or permissions | Include CSRF token in headers; verify API permissions |
+| 401 Unauthorized | Missing or wrong SDK key, or an expired player token | Check the `X-Game-Secret-Key` header (a test key on sandbox, a live key in production); mint a new player token |
+| 403 Forbidden | The game or account cannot use this call | Check the game is active and the account is in good standing in the console |
 | JSON parse errors | Malformed response | Check API endpoint and request format |
 
 ### Debug Logging
