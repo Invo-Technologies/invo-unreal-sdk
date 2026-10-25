@@ -75,8 +75,8 @@ InvoSDK is an enterprise-grade Unreal Engine plugin that seamlessly integrates y
                     ┌─────────────────────────┐
                     │     INVO PLATFORM       │
                     │  ┌───────────────────┐  │
-                    │  │  Authentication   │  │
-                    │  │  /auth/*          │  │
+                    │  │  SDK key check    │  │
+                    │  │  X-Game-Secret-Key│  │
                     │  └───────────────────┘  │
                     │  ┌───────────────────┐  │
                     │  │  API Services     │  │
@@ -202,8 +202,8 @@ InvoSDK supports two environments for development and production use:
 ```
 Host:     https://sandbox.invo.network
 API:      /sandbox/api/*
-Auth:     /sandbox/auth/*
-Console:  https://dev.console.invo.network
+Key:      ivsdk_test_... (sent as X-Game-Secret-Key)
+Console:  https://console.invo.network/test
 ```
 
 **Always use sandbox for development and testing.** Sandbox provides:
@@ -217,7 +217,7 @@ Console:  https://dev.console.invo.network
 ```
 Host:     https://invo.network
 API:      /api/*
-Auth:     /auth/*
+Key:      ivsdk_live_... (sent as X-Game-Secret-Key)
 Console:  https://console.invo.network
 ```
 
@@ -237,11 +237,14 @@ Console:  https://console.invo.network
 
    ```
    Base URL:  https://sandbox.invo.network
-   Endpoint:  /sandbox/api/player/balance
+   Endpoint:  /sandbox/api/currency-purchases/player-balance
    Method:    GET
-   Headers:   Authorization: Bearer <your_token>
+   Headers:   X-Game-Secret-Key: ivsdk_test_...
+              X-Player-Email: player@example.com
    Body:      (empty for GET)
    ```
+
+   There is no login step and no CSRF token. The SDK key in `X-Game-Secret-Key` is the only credential.
 
 3. **Handle the Response**
 
@@ -256,12 +259,13 @@ Console:  https://console.invo.network
 void AMyActor::FetchPlayerBalance()
 {
     TMap<FString, FString> Headers;
-    Headers.Add(TEXT("Authorization"), TEXT("Bearer ") + AuthToken);
+    Headers.Add(TEXT("X-Game-Secret-Key"), SdkKey);   // ivsdk_test_... on sandbox; keep it server-side in production
+    Headers.Add(TEXT("X-Player-Email"), PlayerEmail);
 
     UInvoSDKApiManager* Request = UInvoSDKApiManager::InvoRequest(
         this,
         TEXT("https://sandbox.invo.network"),
-        TEXT("/sandbox/api/player/balance"),
+        TEXT("/sandbox/api/currency-purchases/player-balance"),
         Headers,
         TEXT(""),  // Empty body for GET
         EInvoHttpMethod::GET
@@ -347,8 +351,8 @@ static UInvoSDKApiManager* InvoRequest(
 |-----------|------|-------------|
 | `WorldContextObject` | `UObject*` | World context for the request |
 | `BaseUrl` | `FString` | Base URL (e.g., `https://sandbox.invo.network`) |
-| `Endpoint` | `FString` | API endpoint (e.g., `/sandbox/api/player/balance`) |
-| `Headers` | `TMap<FString, FString>` | HTTP headers (Authorization, etc.) |
+| `Endpoint` | `FString` | API endpoint (e.g., `/sandbox/api/currency-purchases/player-balance`) |
+| `Headers` | `TMap<FString, FString>` | HTTP headers (`X-Game-Secret-Key`, `X-Player-Email`, etc.) |
 | `Body` | `FString` | Request body (JSON string for POST/PUT) |
 | `Method` | `EInvoHttpMethod` | HTTP method (GET, POST, PUT, DELETE) |
 
@@ -573,12 +577,19 @@ Keep the SDK key on your server in production builds (see the security warning u
 ### Example: Item Purchase Flow (C++)
 
 ```cpp
-void AStoreManager::PurchaseItem(const FString& ItemId, int32 Quantity)
+void AStoreManager::PurchaseItem(const FString& ItemId, const FString& ItemName,
+    int32 Quantity, double UnitPrice)
 {
     // Build request body
     TSharedPtr<FJsonObject> JsonBody = MakeShareable(new FJsonObject);
-    JsonBody->SetStringField(TEXT("itemId"), ItemId);
-    JsonBody->SetNumberField(TEXT("quantity"), Quantity);
+    JsonBody->SetStringField(TEXT("client_request_id"), FGuid::NewGuid().ToString());  // idempotency key
+    JsonBody->SetStringField(TEXT("player_email"), PlayerEmail);
+    JsonBody->SetStringField(TEXT("player_name"), PlayerName);
+    JsonBody->SetStringField(TEXT("item_id"), ItemId);
+    JsonBody->SetStringField(TEXT("item_name"), ItemName);
+    JsonBody->SetNumberField(TEXT("item_quantity"), Quantity);
+    JsonBody->SetNumberField(TEXT("unit_price"), UnitPrice);
+    JsonBody->SetNumberField(TEXT("total_price"), UnitPrice * Quantity);
 
     FString BodyString;
     TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&BodyString);
@@ -592,7 +603,7 @@ void AStoreManager::PurchaseItem(const FString& ItemId, int32 Quantity)
     UInvoSDKApiManager* Request = UInvoSDKApiManager::InvoRequest(
         this,
         TEXT("https://sandbox.invo.network"),
-        TEXT("/sandbox/api/store/purchase"),
+        TEXT("/sandbox/api/item-purchases/purchase-item"),
         Headers,
         BodyString,
         EInvoHttpMethod::POST
@@ -660,7 +671,7 @@ TestRequest->Activate();
 
 1. **Never expose API keys in client builds** — Use server-side authentication
 2. **Always use HTTPS** — The SDK enforces this by default
-3. **Implement token refresh** — Access tokens expire; implement automatic refresh
+3. **Mint player tokens on demand**: player tokens are short-lived; have your server mint a new one with `POST /api/sdk/player-token` when one expires
 4. **Validate on server** — Never trust client-side validation alone
 
 ### Performance
@@ -702,7 +713,7 @@ If upgrading from an earlier version of InvoSDK:
 ### Developer Resources
 
 - [Developer Console](https://console.invo.network)
-- [Sandbox Console](https://dev.console.invo.network)
+- [Sandbox Console (test mode)](https://console.invo.network/test)
 - [Sample Projects](https://github.com/invo-network/unreal-samples)
 
 ### Getting Help
