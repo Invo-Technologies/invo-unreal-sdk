@@ -1,5 +1,3 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
-
 #include "InvoSDK.h"
 
 #define LOCTEXT_NAMESPACE "FInvoSDKModule"

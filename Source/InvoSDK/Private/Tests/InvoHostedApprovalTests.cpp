@@ -7,6 +7,7 @@
 #include "InvoHostedApproval.h"
 #include "InvoSDKSettings.h"
 #include "Engine/GameInstance.h"
+#include "UObject/Package.h"
 #include "Misc/AutomationTest.h"
 
 #if WITH_DEV_AUTOMATION_TESTS

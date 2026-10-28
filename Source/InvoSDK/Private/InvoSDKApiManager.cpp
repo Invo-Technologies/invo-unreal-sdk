@@ -2,6 +2,8 @@
 #include "HttpModule.h"
 #include "Interfaces/IHttpResponse.h"
 #include "Modules/ModuleManager.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
 
 UInvoSDKApiManager* UInvoSDKApiManager::InvoRequest(
     UObject* /*WorldContextObject*/,
