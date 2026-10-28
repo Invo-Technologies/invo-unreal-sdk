@@ -6,6 +6,7 @@
 #include "InvoLibrary.h"
 #include "InvoQrCode.h"
 #include "InvoHttp.h"
+#include "InvoMock.h"
 #include "InvoSubsystem.h"
 #include "InvoTypes.h"
 #include "Dom/JsonObject.h"
@@ -310,6 +311,48 @@ bool FInvoQrCodeTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("failure clears size"), Size, 0);
     TestTrue(TEXT("largest byte payload fits"), UInvoQrCodeLibrary::EncodeQrModules(FString::ChrN(2331, TEXT('a')), Size, Modules));
     TestEqual(TEXT("version 40"), Size, 177);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FInvoMockTest, "InvoSDK.Core.Mock", INVO_TEST_FLAGS)
+bool FInvoMockTest::RunTest(const FString& Parameters)
+{
+    // The offline mock follows the real approval sequence, so the wallet demo behaves like the sandbox.
+    FInvoMock::Reset();
+    const FString Base = TEXT("https://sandbox.invo.network/sandbox");
+    auto Call = [&Base](const TCHAR* Verb, const FString& Path, const FString& Body)
+    {
+        const FInvoRawResponse R = FInvoMock::Handle(Verb, Base + Path, Body);
+        return TPair<int32, TSharedPtr<FJsonObject>>(R.Status, ParseJson(R.Body));
+    };
+
+    auto Send = Call(TEXT("POST"), TEXT("/api/currency-sends/initiate-send"), TEXT("{}"));
+    TestEqual(TEXT("initiate ok"), Send.Key, 200);
+    const FString Txn = Send.Value->GetStringField(TEXT("transaction_id"));
+
+    auto Begin = Call(TEXT("POST"), TEXT("/api/sdk/approvals/device/begin"), FString::Printf(TEXT("{\"transaction_id\":\"%s\",\"flow\":\"send\"}"), *Txn));
+    TestEqual(TEXT("begin ok"), Begin.Key, 200);
+    const FString Device = Begin.Value->GetStringField(TEXT("device_code"));
+    TestTrue(TEXT("https approval link"), Begin.Value->GetStringField(TEXT("verification_uri_complete")).StartsWith(TEXT("https://")));
+
+    const FString DeviceBody = FString::Printf(TEXT("{\"device_code\":\"%s\"}"), *Device);
+    const FString SettlePath = FString::Printf(TEXT("/api/sdk/send/%s/approve"), *Txn);
+    TestEqual(TEXT("settle before approval refused"), Call(TEXT("POST"), SettlePath, DeviceBody).Key, 400);
+    auto Poll1 = Call(TEXT("POST"), TEXT("/api/sdk/approvals/device/poll"), DeviceBody);
+    TestEqual(TEXT("first poll pending"), Poll1.Value->GetStringField(TEXT("error")), FString(TEXT("authorization_pending")));
+    auto Poll2 = Call(TEXT("POST"), TEXT("/api/sdk/approvals/device/poll"), DeviceBody);
+    TestEqual(TEXT("second poll approved"), Poll2.Value->GetStringField(TEXT("status")), FString(TEXT("approved")));
+    auto Settle = Call(TEXT("POST"), SettlePath, DeviceBody);
+    TestEqual(TEXT("settle ok"), Settle.Key, 200);
+    auto Again = Call(TEXT("POST"), SettlePath, DeviceBody);
+    TestEqual(TEXT("second settle not pending"), Again.Value->GetStringField(TEXT("code")), FString(TEXT("TRANSACTION_NOT_PENDING")));
+
+    auto Broke = Call(TEXT("POST"), TEXT("/api/item-purchases/purchase-item"), TEXT("{\"total_price\":\"5000\"}"));
+    TestEqual(TEXT("insufficient balance"), Broke.Value->GetStringField(TEXT("code")), FString(TEXT("INSUFFICIENT_BALANCE")));
+    auto Bought = Call(TEXT("POST"), TEXT("/api/item-purchases/purchase-item"), TEXT("{\"total_price\":\"20\"}"));
+    TestEqual(TEXT("purchase spends the balance"), Bought.Value->GetStringField(TEXT("new_balance")), FString(TEXT("100.00")));
+    TestEqual(TEXT("unknown route 404"), Call(TEXT("GET"), TEXT("/api/nope"), FString()).Key, 404);
+    FInvoMock::Reset();
     return true;
 }
 

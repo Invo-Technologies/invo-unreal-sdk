@@ -18,7 +18,7 @@ The official Unreal Engine plugin for INVO Network (https://invo.network). INVO 
 - **A C++ and Blueprint API** (`Invo Subsystem`): sign-in, balances, hosted checkout, item purchases, sends, transfers, pending collect, claim codes and phone changes. Every call answers with an `FInvoResult` carrying INVO's stable error codes, plus Blueprint error checks such as Is Insufficient Balance and Is Rate Limited.
 - **Phone approval.** Sends and transfers are approved on the player's phone. On desktop the player scans a QR code; on mobile the approval page opens in the system browser and returns to the game through the `invo-sdk-<GameId>` link. A built-in Slate prompt handles the first-time "is this your phone?" match code.
 - **Project Settings > Plugins > Invo SDK**: sandbox and production game IDs, game server URL, token and checkout endpoints, and display settings.
-- **Demo map and UMG widgets** for the store, send, transfer and collect screens.
+- **A ready-made wallet**: Store, Send, Transfer, Collect and phone screens drawn in Slate, opened with one Blueprint node. The demo map runs every screen offline with demo data, no account needed.
 - **Automation tests** under `InvoSDK.*` in the Session Frontend.
 
 **Security**
@@ -30,13 +30,13 @@ Get free sandbox keys in Test mode at console.invo.network/test, then follow the
 ## Technical details
 - Features: C++ and Blueprint API, hosted checkout, item purchases, player-to-player sends, cross-game transfers, phone (passkey) approval with QR code and mobile deep link, sandbox and production environments
 - Code modules: InvoSDK (Runtime)
-- Number of Blueprints: see Content/ (demo map and UI widgets)
-- Number of C++ classes: UInvoSubsystem, UInvoLibrary, UInvoHostedApprovalSubsystem, UInvoHostedApprovalLibrary, UInvoSDKSettings, UInvoSDKLocalSettings, UInvoSDKApiManager
+- Number of Blueprints: 0 (the wallet is C++/Slate; one demo map)
+- Number of C++ classes: UInvoSubsystem, UInvoLibrary, UInvoHostedApprovalSubsystem, UInvoHostedApprovalLibrary, UInvoSDKSettings, UInvoSDKLocalSettings, UInvoWalletSubsystem, AInvoWalletDemoActor, UInvoQrCodeLibrary, UInvoSDKApiManager
 - Network replicated: No (client and your own game server)
 - Supported development platforms: Windows
 - Supported target build platforms: Windows, Android, iOS
 - Documentation: https://docs.invo.network
-- Example project: Content/Map/DemoMap
+- Example project: Content/Map/InvoWalletDemo (works offline)
 - Important notes: Requires an INVO account (free sandbox at console.invo.network/test). Real-money top-ups use INVO's hosted checkout in the system browser.
 
 ## Tags

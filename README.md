@@ -29,6 +29,7 @@
 The official Unreal Engine plugin for [INVO Network](https://ourinvo.com). Sell currency packs through INVO's hosted checkout, sell in-game items, and let players send currency to friends or move it to another INVO game, with every send approved on the player's phone.
 
 - **`UInvoSubsystem`**: the whole API as a Game Instance Subsystem, in C++ and Blueprint. Every call answers once with an `FInvoResult` (`bOk`, `Data`, `Error`) carrying INVO's stable error codes.
+- **A ready-made wallet** (`UInvoWalletSubsystem`): Store, Send, Transfer, Collect and phone screens in Slate, the same screens and copy as INVO's Unity and Godot wallets. Open it with one node.
 - **Phone approval**: a QR code on desktop (`UInvoQrCodeLibrary`, encoded in-process), the system browser on phones (`UInvoHostedApprovalSubsystem`).
 - **Error checks** in `UInvoLibrary`: Is Insufficient Balance, Is Rate Limited, Is Receiver Not Enrolled and more, so your UI never parses strings.
 - **Same rules as INVO's Unity and Godot SDKs**: https only, money calls never retried automatically, idempotency keys on every purchase and send, and no production key in a build.
@@ -94,6 +95,12 @@ Enable **Edit > Plugins > INVO Network SDK** and restart the editor.
 ---
 
 ## Quick Start
+
+### Try the wallet in 30 seconds
+
+Open `/InvoSDK/Map/InvoWalletDemo` and press Play. With nothing configured, the **INVO Wallet Demo** actor switches the SDK to its offline mock (Development builds only) and signs in a demo player, so every screen works with no network: buy a pack, send to a phone, approve with the QR code, collect. Press F8 to toggle the wallet. Add your sandbox key in Project Settings and the same map talks to the real sandbox.
+
+In your own game: **Get Game Instance > Invo Wallet Subsystem > Open Wallet** (`Store`, `Send`, `Transfer`, `Collect` or `Phone`). Set the items it sells with **Set Item Catalog**, and listen to **On Wallet Changed** to refresh your HUD.
 
 ### Blueprint
 
@@ -303,13 +310,19 @@ A player token that expires mid-session (`SDK_TOKEN_EXPIRED`) is re-minted once 
 - Security: `SecureBaseUrlProblem`, `KeyEnvironment`
 - Error checks: `IsTokenExpired`, `IsKeyForOtherEnvironment`, `IsReceiverNotEnrolled`, `IsInsufficientBalance`, `IsPhoneShareApprovalRequired`, `IsPhoneChangeRequiresVerification`, `IsPasskeyRecoveryCooldown`, `IsDuplicateRequest`, `IsRateLimited`, `GetRetryAfterSeconds`, `GetErrorBodyString`
 
+### `UInvoWalletSubsystem`
+
+`OpenWallet(Panel)`, `CloseWallet`, `ToggleWallet`, `IsWalletOpen`, `SetItemCatalog`, `OnWalletVisibilityChanged`, `OnWalletChanged`. The wallet is drawn in Slate over the game viewport and uses Project Settings > Invo SDK > Game Name and Currency Name. `AInvoWalletDemoActor` opens it on BeginPlay and toggles it with F8.
+
+`UInvoSubsystem::EnableOfflineMock()` (Development builds) answers every call locally with demo data: the wallet, your own UI and the automation tests can run with no network or credentials.
+
 ### `UInvoQrCodeLibrary`
 
 `MakeQrCodeTexture(Text, PixelsPerModule, QuietZoneModules, DarkColor, LightColor)` and, in C++, `EncodeQrModules(Text, OutSize, OutModules)`.
 
 ### Low-level requests (1.x)
 
-`UInvoSDKApiManager::InvoRequest` (an async Blueprint node with `OnSuccess` / `OnFail`) and `UInvoSDKJsonHelpers` are kept for 1.x projects and the bundled UMG widgets. New code should use `UInvoSubsystem`, which adds the routing, validation, retries and error codes above.
+`UInvoSDKApiManager::InvoRequest` (an async Blueprint node with `OnSuccess` / `OnFail`) and `UInvoSDKJsonHelpers` are kept for 1.x projects. New code should use `UInvoSubsystem`, which adds the routing, validation, retries and error codes above.
 
 ---
 
@@ -345,6 +358,8 @@ UnrealEditor-Cmd.exe <Project>.uproject -ExecCmds="Automation RunTests InvoSDK;Q
 - **Commerce routing**: sandbox key straight to INVO in Development builds only; production through your game server with the player token. Shipping builds refuse direct mode.
 - **`FInvoResult` / `FInvoError`** with INVO's stable error codes and the `UInvoLibrary` error checks.
 - **HTTP rules**: https only (loopback exempt), retries only for reads, redacted URLs in logs, sanitised headers, single-flight token refresh.
+- **Wallet**: `UInvoWalletSubsystem`, a Slate wallet with Store, Send, Transfer, Collect and phone screens, and `AInvoWalletDemoActor` with the `InvoWalletDemo` map. Replaces the 1.x UMG widgets and demo map.
+- **Offline mock**: `EnableOfflineMock()` for demos and UI work without credentials (Development builds only).
 - **QR codes**: `UInvoQrCodeLibrary` for desktop phone approval.
 - **Hosted approval on mobile**: `UInvoHostedApprovalSubsystem` opens INVO's hosted approval page in the system browser and returns on `invo-sdk-<GameId>://done`.
 - **Settings**: sandbox and production game IDs, game server and endpoint URLs; the sandbox key moved to per-user local settings.

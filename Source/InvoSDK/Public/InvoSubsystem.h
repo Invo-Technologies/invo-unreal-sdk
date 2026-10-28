@@ -84,6 +84,18 @@ public:
     UFUNCTION(BlueprintPure, Category = "InvoSDK|Config")
     FString CommerceProblem() const;
 
+    /** True when a sandbox key, a Player Token Endpoint or a Game Server URL is configured. */
+    UFUNCTION(BlueprintPure, Category = "InvoSDK|Config")
+    bool HasCredentials() const;
+
+    /** Development builds only: answer every call from the built-in offline mock (canned sandbox
+     *  responses, no network, no credentials) so UI work and demos run anywhere. Refused in Shipping. */
+    UFUNCTION(BlueprintCallable, Category = "InvoSDK|Config")
+    void EnableOfflineMock();
+
+    UFUNCTION(BlueprintPure, Category = "InvoSDK|Config")
+    bool IsOfflineMock() const { return bOfflineMock; }
+
     // ---------------- player ----------------
 
     /** Hand the SDK a player token your backend minted. */
@@ -217,10 +229,28 @@ public:
 
     // ---------------- native ----------------
 
-    /** C++ entry points take FInvoResultCallback; the Blueprint ones forward to these. */
+    /** C++ entry points take FInvoResultCallback (lambdas); the Blueprint ones forward to these. */
     void GetBalanceNative(FInvoResultCallback Done);
     void GetGameItemsNative(FInvoResultCallback Done);
     void OpenCheckoutNative(const FString& UsdAmount, FInvoResultCallback Done);
+    void LoginViaBackendNative(const FString& PayloadJson, FInvoResultCallback Done);
+    void LoginSandboxNative(const FString& Email, const FString& Phone, const FString& DisplayName, FInvoResultCallback Done);
+    void BeginPhoneApprovalNative(const FString& TransactionId, const FString& Flow, const FString& Channel, FInvoResultCallback Done);
+    void PollPhoneApprovalNative(const FString& DeviceCode, FInvoResultCallback Done);
+    void ConfirmPhoneEnrollmentNative(const FString& DeviceCode, bool bApprove, FInvoResultCallback Done);
+    void SettlePhoneApprovalNative(const FString& TransactionId, const FString& Flow, const FString& DeviceCode, FInvoResultCallback Done);
+    void PurchaseItemNative(const FString& ClientRequestId, const FString& ItemId, const FString& ItemName, int32 Quantity, const FString& UnitPrice, const FString& TotalPrice, FInvoResultCallback Done);
+    void InitiateSendNative(const FString& ClientRequestId, const FString& ReceiverPhone, const FString& ReceivingGameId, const FString& Amount, FInvoResultCallback Done);
+    void InitiateTransferNative(const FString& ClientRequestId, const FString& TargetGameId, const FString& Amount, FInvoResultCallback Done);
+    void ClaimCurrencyNative(const FString& ClaimCode, FInvoResultCallback Done);
+    void ClaimTransferNative(const FString& ClaimCode, const FString& TargetCurrencyId, FInvoResultCallback Done);
+    void GetSendStatusNative(const FString& TransactionId, FInvoResultCallback Done);
+    void GetTransferStatusNative(const FString& TransactionId, FInvoResultCallback Done);
+    void ChangePlayerPhoneNative(const FString& NewPhone, FInvoResultCallback Done);
+    void CreatePhoneChangeRequestNative(const FString& NewPhone, FInvoResultCallback Done);
+    void GetPhoneChangeRequestNative(const FString& ChangeRequestId, FInvoResultCallback Done);
+    void GetDestinationsNative(const FString& Direction, FInvoResultCallback Done);
+    void GetPendingCollectNative(FInvoResultCallback Done);
 
     /** Replaces the network for tests and the offline mock (Development builds only). */
     void SetTransportForTesting(TFunction<void(const FString&, const FString&, const TMap<FString, FString>&, const FString&, TFunction<void(const FInvoRawResponse&)>)> Transport);
@@ -235,6 +265,7 @@ private:
     FString PlayerEmail;
     FString PlayerPhone;
     FString PlayerName;
+    bool bOfflineMock = false;
     /** Body re-posted to the token endpoint when a token expires; empty when not logged in via backend. */
     FString TokenEndpoint;
     FString TokenPayloadJson;
@@ -257,8 +288,7 @@ private:
     void CommerceGet(const FString& Path, FInvoResultCallback Done);
     void CommercePost(const FString& Path, TSharedPtr<FJsonObject> Body, bool bIdempotent, FInvoResultCallback Done);
 
-    /** Fires OnRequestFailed for failures, then the caller's delegate. */
-    FInvoResultCallback Wrap(const FInvoResultDelegate& OnDone);
+    /** Fires OnRequestFailed for failures, then the caller's callback. Every *Native entry point wraps once. */
     FInvoResultCallback WrapNative(FInvoResultCallback Done);
 
     void OpenCheckoutUrl(const FInvoResult& Result, FInvoResultCallback Done);

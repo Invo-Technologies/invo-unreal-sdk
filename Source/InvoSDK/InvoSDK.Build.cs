@@ -36,7 +36,8 @@ public class InvoSDK : ModuleRules
                 "HTTP",            
                 "Json",            
                 "JsonUtilities",
-                "DeveloperSettings"   // UInvoSDKSettings: Public/InvoSDKSettings.h includes Engine/DeveloperSettings.h
+                "DeveloperSettings",  // UInvoSDKSettings: Public/InvoSDKSettings.h includes Engine/DeveloperSettings.h
+                "InputCore"           // AInvoWalletDemoActor: FKey in a public header
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
@@ -49,6 +50,7 @@ public class InvoSDK : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
+				"ApplicationCore",  // wallet: copy the claim code to the clipboard
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

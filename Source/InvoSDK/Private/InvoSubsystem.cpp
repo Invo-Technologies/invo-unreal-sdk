@@ -1,5 +1,6 @@
 #include "InvoSubsystem.h"
 #include "InvoHttp.h"
+#include "InvoMock.h"
 #include "InvoLibrary.h"
 #include "InvoSDKSettings.h"
 #include "InvoHostedApproval.h"
@@ -212,19 +213,6 @@ TMap<FString, FString> UInvoSubsystem::PlayerAuth() const
     return Auth;
 }
 
-FInvoResultCallback UInvoSubsystem::Wrap(const FInvoResultDelegate& OnDone)
-{
-    TWeakObjectPtr<UInvoSubsystem> WeakThis(this);
-    return [WeakThis, OnDone](const FInvoResult& Result)
-    {
-        if (!Result.bOk && WeakThis.IsValid())
-        {
-            WeakThis->OnRequestFailed.Broadcast(Result.Error);
-        }
-        OnDone.ExecuteIfBound(Result);
-    };
-}
-
 FInvoResultCallback UInvoSubsystem::WrapNative(FInvoResultCallback Done)
 {
     TWeakObjectPtr<UInvoSubsystem> WeakThis(this);
@@ -248,6 +236,25 @@ void UInvoSubsystem::SetTransportForTesting(TFunction<void(const FString&, const
 #else
     Http->SetTransport(MoveTemp(Transport));
     GameServerHttp.Reset();
+#endif
+}
+
+bool UInvoSubsystem::HasCredentials() const
+{
+    const UInvoSDKSettings* Settings = GetDefault<UInvoSDKSettings>();
+    return !ResolveSandboxSecret().IsEmpty() || !Settings->PlayerTokenEndpoint.TrimStartAndEnd().IsEmpty()
+        || !Settings->GameServerUrl.TrimStartAndEnd().IsEmpty();
+}
+
+void UInvoSubsystem::EnableOfflineMock()
+{
+#if UE_BUILD_SHIPPING
+    UE_LOG(LogInvo, Error, TEXT("[Invo] The offline mock is refused in Shipping builds: it would fake commerce results."));
+#else
+    FInvoMock::Reset();
+    SetTransportForTesting(FInvoMock::Transport());
+    bOfflineMock = true;
+    UE_LOG(LogInvo, Display, TEXT("[Invo] Offline mock on: every call is answered locally with demo data."));
 #endif
 }
 
@@ -286,7 +293,12 @@ bool UInvoSubsystem::RequireActivePlayer(FInvoResultCallback& Done, bool bNeedPh
 
 void UInvoSubsystem::LoginViaBackend(const FString& PayloadJson, const FInvoResultDelegate& OnDone)
 {
-    FInvoResultCallback Done = Wrap(OnDone);
+    LoginViaBackendNative(PayloadJson, [OnDone](const FInvoResult& Result) { OnDone.ExecuteIfBound(Result); });
+}
+
+void UInvoSubsystem::LoginViaBackendNative(const FString& PayloadJson, FInvoResultCallback InDone)
+{
+    FInvoResultCallback Done = WrapNative(MoveTemp(InDone));
     FString Endpoint = GetDefault<UInvoSDKSettings>()->PlayerTokenEndpoint;
     Endpoint.TrimStartAndEndInline();
     if (Endpoint.IsEmpty())
@@ -329,7 +341,12 @@ void UInvoSubsystem::LoginViaBackend(const FString& PayloadJson, const FInvoResu
 
 void UInvoSubsystem::LoginSandbox(const FString& Email, const FString& Phone, const FString& DisplayName, const FInvoResultDelegate& OnDone)
 {
-    FInvoResultCallback Done = Wrap(OnDone);
+    LoginSandboxNative(Email, Phone, DisplayName, [OnDone](const FInvoResult& Result) { OnDone.ExecuteIfBound(Result); });
+}
+
+void UInvoSubsystem::LoginSandboxNative(const FString& Email, const FString& Phone, const FString& DisplayName, FInvoResultCallback InDone)
+{
+    FInvoResultCallback Done = WrapNative(MoveTemp(InDone));
     if (Environment != EInvoEnvironment::Sandbox)
     {
         Done(Fail(FInvoError::Make(TEXT("LoginSandbox is sandbox-only. In production your backend mints player tokens: use LoginViaBackend."), TEXT("SANDBOX_ONLY"))));
@@ -498,13 +515,23 @@ void UInvoSubsystem::GetBalanceNative(FInvoResultCallback Done)
 
 void UInvoSubsystem::GetDestinations(const FString& Direction, const FInvoResultDelegate& OnDone)
 {
+    GetDestinationsNative(Direction, [OnDone](const FInvoResult& Result) { OnDone.ExecuteIfBound(Result); });
+}
+
+void UInvoSubsystem::GetDestinationsNative(const FString& Direction, FInvoResultCallback Done)
+{
     const FString Dir = Direction == TEXT("send") ? TEXT("send") : TEXT("transfer");
-    PlayerGet(FString::Printf(TEXT("/api/sdk/destinations?direction=%s"), *Dir), Wrap(OnDone));
+    PlayerGet(FString::Printf(TEXT("/api/sdk/destinations?direction=%s"), *Dir), WrapNative(MoveTemp(Done)));
 }
 
 void UInvoSubsystem::GetPendingCollect(const FInvoResultDelegate& OnDone)
 {
-    PlayerGet(TEXT("/api/sdk/transfers/pending"), Wrap(OnDone));
+    GetPendingCollectNative([OnDone](const FInvoResult& Result) { OnDone.ExecuteIfBound(Result); });
+}
+
+void UInvoSubsystem::GetPendingCollectNative(FInvoResultCallback Done)
+{
+    PlayerGet(TEXT("/api/sdk/transfers/pending"), WrapNative(MoveTemp(Done)));
 }
 
 // ---------------------------------------------------------------- phone approval
@@ -533,7 +560,12 @@ static FInvoError TxnFlowProblem(const FString& TransactionId, const FString& Fl
 
 void UInvoSubsystem::BeginPhoneApproval(const FString& TransactionId, const FString& Flow, const FString& Channel, const FInvoResultDelegate& OnDone)
 {
-    FInvoResultCallback Done = Wrap(OnDone);
+    BeginPhoneApprovalNative(TransactionId, Flow, Channel, [OnDone](const FInvoResult& Result) { OnDone.ExecuteIfBound(Result); });
+}
+
+void UInvoSubsystem::BeginPhoneApprovalNative(const FString& TransactionId, const FString& Flow, const FString& Channel, FInvoResultCallback InDone)
+{
+    FInvoResultCallback Done = WrapNative(MoveTemp(InDone));
     const FInvoError Problem = TxnFlowProblem(TransactionId, Flow);
     if (!Problem.Code.IsEmpty())
     {
@@ -571,7 +603,12 @@ void UInvoSubsystem::BeginPhoneApproval(const FString& TransactionId, const FStr
 
 void UInvoSubsystem::PollPhoneApproval(const FString& DeviceCode, const FInvoResultDelegate& OnDone)
 {
-    FInvoResultCallback Done = Wrap(OnDone);
+    PollPhoneApprovalNative(DeviceCode, [OnDone](const FInvoResult& Result) { OnDone.ExecuteIfBound(Result); });
+}
+
+void UInvoSubsystem::PollPhoneApprovalNative(const FString& DeviceCode, FInvoResultCallback InDone)
+{
+    FInvoResultCallback Done = WrapNative(MoveTemp(InDone));
     if (!IsPresent(DeviceCode))
     {
         Done(Fail(FInvoError::InvalidInput(TEXT("deviceCode"), TEXT("<redacted>"), TEXT("is required"))));
@@ -609,7 +646,12 @@ void UInvoSubsystem::PollPhoneApproval(const FString& DeviceCode, const FInvoRes
 
 void UInvoSubsystem::ConfirmPhoneEnrollment(const FString& DeviceCode, bool bApprove, const FInvoResultDelegate& OnDone)
 {
-    FInvoResultCallback Done = Wrap(OnDone);
+    ConfirmPhoneEnrollmentNative(DeviceCode, bApprove, [OnDone](const FInvoResult& Result) { OnDone.ExecuteIfBound(Result); });
+}
+
+void UInvoSubsystem::ConfirmPhoneEnrollmentNative(const FString& DeviceCode, bool bApprove, FInvoResultCallback InDone)
+{
+    FInvoResultCallback Done = WrapNative(MoveTemp(InDone));
     if (!IsPresent(DeviceCode))
     {
         Done(Fail(FInvoError::InvalidInput(TEXT("deviceCode"), TEXT("<redacted>"), TEXT("is required"))));
@@ -666,7 +708,12 @@ int32 UInvoSubsystem::NextPollInterval(int32 Current, const FString& Status, int
 
 void UInvoSubsystem::SettlePhoneApproval(const FString& TransactionId, const FString& Flow, const FString& DeviceCode, const FInvoResultDelegate& OnDone)
 {
-    FInvoResultCallback Done = Wrap(OnDone);
+    SettlePhoneApprovalNative(TransactionId, Flow, DeviceCode, [OnDone](const FInvoResult& Result) { OnDone.ExecuteIfBound(Result); });
+}
+
+void UInvoSubsystem::SettlePhoneApprovalNative(const FString& TransactionId, const FString& Flow, const FString& DeviceCode, FInvoResultCallback InDone)
+{
+    FInvoResultCallback Done = WrapNative(MoveTemp(InDone));
     const FInvoError Problem = TxnFlowProblem(TransactionId, Flow);
     if (!Problem.Code.IsEmpty())
     {
@@ -710,11 +757,12 @@ void UInvoSubsystem::SettlePhoneApproval(const FString& TransactionId, const FSt
 
 void UInvoSubsystem::GetGameItems(const FInvoResultDelegate& OnDone)
 {
-    GetGameItemsNative(Wrap(OnDone));
+    GetGameItemsNative([OnDone](const FInvoResult& Result) { OnDone.ExecuteIfBound(Result); });
 }
 
-void UInvoSubsystem::GetGameItemsNative(FInvoResultCallback Done)
+void UInvoSubsystem::GetGameItemsNative(FInvoResultCallback InDone)
 {
+    FInvoResultCallback Done = WrapNative(MoveTemp(InDone));
     TSharedRef<FJsonObject> Body = MakeShared<FJsonObject>();
     // The sandbox route reads the key from the body too; in production your game server fills it in.
     Body->SetStringField(TEXT("game_secret"), Environment == EInvoEnvironment::Sandbox && !Http->HasTransportOverride() ? ResolveSandboxSecret() : FString());
@@ -723,11 +771,12 @@ void UInvoSubsystem::GetGameItemsNative(FInvoResultCallback Done)
 
 void UInvoSubsystem::OpenCheckout(const FString& UsdAmount, const FInvoResultDelegate& OnDone)
 {
-    OpenCheckoutNative(UsdAmount, Wrap(OnDone));
+    OpenCheckoutNative(UsdAmount, [OnDone](const FInvoResult& Result) { OnDone.ExecuteIfBound(Result); });
 }
 
-void UInvoSubsystem::OpenCheckoutNative(const FString& UsdAmount, FInvoResultCallback Done)
+void UInvoSubsystem::OpenCheckoutNative(const FString& UsdAmount, FInvoResultCallback InDone)
 {
+    FInvoResultCallback Done = WrapNative(MoveTemp(InDone));
     if (!RequireActivePlayer(Done, false))
     {
         return;
@@ -790,10 +839,14 @@ void UInvoSubsystem::OpenCheckoutUrl(const FInvoResult& Result, FInvoResultCallb
     Done(Result);
 }
 
-void UInvoSubsystem::PurchaseItem(const FString& ClientRequestId, const FString& ItemId, const FString& ItemName, int32 Quantity,
-                                  const FString& UnitPrice, const FString& TotalPrice, const FInvoResultDelegate& OnDone)
+void UInvoSubsystem::PurchaseItem(const FString& ClientRequestId, const FString& ItemId, const FString& ItemName, int32 Quantity, const FString& UnitPrice, const FString& TotalPrice, const FInvoResultDelegate& OnDone)
 {
-    FInvoResultCallback Done = Wrap(OnDone);
+    PurchaseItemNative(ClientRequestId, ItemId, ItemName, Quantity, UnitPrice, TotalPrice, [OnDone](const FInvoResult& Result) { OnDone.ExecuteIfBound(Result); });
+}
+
+void UInvoSubsystem::PurchaseItemNative(const FString& ClientRequestId, const FString& ItemId, const FString& ItemName, int32 Quantity, const FString& UnitPrice, const FString& TotalPrice, FInvoResultCallback InDone)
+{
+    FInvoResultCallback Done = WrapNative(MoveTemp(InDone));
     if (!RequireActivePlayer(Done, false))
     {
         return;
@@ -884,10 +937,14 @@ static FInvoError MoveProblem(const FString& ClientRequestId, const FString& Pho
     return FInvoError();
 }
 
-void UInvoSubsystem::InitiateSend(const FString& ClientRequestId, const FString& ReceiverPhone, const FString& ReceivingGameId,
-                                  const FString& Amount, const FInvoResultDelegate& OnDone)
+void UInvoSubsystem::InitiateSend(const FString& ClientRequestId, const FString& ReceiverPhone, const FString& ReceivingGameId, const FString& Amount, const FInvoResultDelegate& OnDone)
 {
-    FInvoResultCallback Done = Wrap(OnDone);
+    InitiateSendNative(ClientRequestId, ReceiverPhone, ReceivingGameId, Amount, [OnDone](const FInvoResult& Result) { OnDone.ExecuteIfBound(Result); });
+}
+
+void UInvoSubsystem::InitiateSendNative(const FString& ClientRequestId, const FString& ReceiverPhone, const FString& ReceivingGameId, const FString& Amount, FInvoResultCallback InDone)
+{
+    FInvoResultCallback Done = WrapNative(MoveTemp(InDone));
     if (!RequireActivePlayer(Done, true))
     {
         return;
@@ -909,10 +966,14 @@ void UInvoSubsystem::InitiateSend(const FString& ClientRequestId, const FString&
     CommercePost(TEXT("/api/currency-sends/initiate-send"), Body, true, MoveTemp(Done));
 }
 
-void UInvoSubsystem::InitiateTransfer(const FString& ClientRequestId, const FString& TargetGameId, const FString& Amount,
-                                      const FInvoResultDelegate& OnDone)
+void UInvoSubsystem::InitiateTransfer(const FString& ClientRequestId, const FString& TargetGameId, const FString& Amount, const FInvoResultDelegate& OnDone)
 {
-    FInvoResultCallback Done = Wrap(OnDone);
+    InitiateTransferNative(ClientRequestId, TargetGameId, Amount, [OnDone](const FInvoResult& Result) { OnDone.ExecuteIfBound(Result); });
+}
+
+void UInvoSubsystem::InitiateTransferNative(const FString& ClientRequestId, const FString& TargetGameId, const FString& Amount, FInvoResultCallback InDone)
+{
+    FInvoResultCallback Done = WrapNative(MoveTemp(InDone));
     if (!RequireActivePlayer(Done, true))
     {
         return;
@@ -936,7 +997,12 @@ void UInvoSubsystem::InitiateTransfer(const FString& ClientRequestId, const FStr
 
 void UInvoSubsystem::ClaimCurrency(const FString& ClaimCode, const FInvoResultDelegate& OnDone)
 {
-    FInvoResultCallback Done = Wrap(OnDone);
+    ClaimCurrencyNative(ClaimCode, [OnDone](const FInvoResult& Result) { OnDone.ExecuteIfBound(Result); });
+}
+
+void UInvoSubsystem::ClaimCurrencyNative(const FString& ClaimCode, FInvoResultCallback InDone)
+{
+    FInvoResultCallback Done = WrapNative(MoveTemp(InDone));
     if (!RequireActivePlayer(Done, true))
     {
         return;
@@ -956,7 +1022,12 @@ void UInvoSubsystem::ClaimCurrency(const FString& ClaimCode, const FInvoResultDe
 
 void UInvoSubsystem::ClaimTransfer(const FString& ClaimCode, const FString& TargetCurrencyId, const FInvoResultDelegate& OnDone)
 {
-    FInvoResultCallback Done = Wrap(OnDone);
+    ClaimTransferNative(ClaimCode, TargetCurrencyId, [OnDone](const FInvoResult& Result) { OnDone.ExecuteIfBound(Result); });
+}
+
+void UInvoSubsystem::ClaimTransferNative(const FString& ClaimCode, const FString& TargetCurrencyId, FInvoResultCallback InDone)
+{
+    FInvoResultCallback Done = WrapNative(MoveTemp(InDone));
     if (!RequireActivePlayer(Done, true))
     {
         return;
@@ -977,7 +1048,12 @@ void UInvoSubsystem::ClaimTransfer(const FString& ClaimCode, const FString& Targ
 
 void UInvoSubsystem::GetSendStatus(const FString& TransactionId, const FInvoResultDelegate& OnDone)
 {
-    FInvoResultCallback Done = Wrap(OnDone);
+    GetSendStatusNative(TransactionId, [OnDone](const FInvoResult& Result) { OnDone.ExecuteIfBound(Result); });
+}
+
+void UInvoSubsystem::GetSendStatusNative(const FString& TransactionId, FInvoResultCallback InDone)
+{
+    FInvoResultCallback Done = WrapNative(MoveTemp(InDone));
     if (!IsPresent(TransactionId))
     {
         Done(Fail(FInvoError::InvalidInput(TEXT("transactionId"), TransactionId, TEXT("is required"))));
@@ -988,7 +1064,12 @@ void UInvoSubsystem::GetSendStatus(const FString& TransactionId, const FInvoResu
 
 void UInvoSubsystem::GetTransferStatus(const FString& TransactionId, const FInvoResultDelegate& OnDone)
 {
-    FInvoResultCallback Done = Wrap(OnDone);
+    GetTransferStatusNative(TransactionId, [OnDone](const FInvoResult& Result) { OnDone.ExecuteIfBound(Result); });
+}
+
+void UInvoSubsystem::GetTransferStatusNative(const FString& TransactionId, FInvoResultCallback InDone)
+{
+    FInvoResultCallback Done = WrapNative(MoveTemp(InDone));
     if (!IsPresent(TransactionId))
     {
         Done(Fail(FInvoError::InvalidInput(TEXT("transactionId"), TransactionId, TEXT("is required"))));
@@ -1001,7 +1082,12 @@ void UInvoSubsystem::GetTransferStatus(const FString& TransactionId, const FInvo
 
 void UInvoSubsystem::ChangePlayerPhone(const FString& NewPhone, const FInvoResultDelegate& OnDone)
 {
-    FInvoResultCallback Done = Wrap(OnDone);
+    ChangePlayerPhoneNative(NewPhone, [OnDone](const FInvoResult& Result) { OnDone.ExecuteIfBound(Result); });
+}
+
+void UInvoSubsystem::ChangePlayerPhoneNative(const FString& NewPhone, FInvoResultCallback InDone)
+{
+    FInvoResultCallback Done = WrapNative(MoveTemp(InDone));
     if (!RequireActivePlayer(Done, false))
     {
         return;
@@ -1027,7 +1113,12 @@ void UInvoSubsystem::ChangePlayerPhone(const FString& NewPhone, const FInvoResul
 
 void UInvoSubsystem::CreatePhoneChangeRequest(const FString& NewPhone, const FInvoResultDelegate& OnDone)
 {
-    FInvoResultCallback Done = Wrap(OnDone);
+    CreatePhoneChangeRequestNative(NewPhone, [OnDone](const FInvoResult& Result) { OnDone.ExecuteIfBound(Result); });
+}
+
+void UInvoSubsystem::CreatePhoneChangeRequestNative(const FString& NewPhone, FInvoResultCallback InDone)
+{
+    FInvoResultCallback Done = WrapNative(MoveTemp(InDone));
     if (!RequireActivePlayer(Done, false))
     {
         return;
@@ -1057,7 +1148,12 @@ void UInvoSubsystem::CreatePhoneChangeRequest(const FString& NewPhone, const FIn
 
 void UInvoSubsystem::GetPhoneChangeRequest(const FString& ChangeRequestId, const FInvoResultDelegate& OnDone)
 {
-    FInvoResultCallback Done = Wrap(OnDone);
+    GetPhoneChangeRequestNative(ChangeRequestId, [OnDone](const FInvoResult& Result) { OnDone.ExecuteIfBound(Result); });
+}
+
+void UInvoSubsystem::GetPhoneChangeRequestNative(const FString& ChangeRequestId, FInvoResultCallback InDone)
+{
+    FInvoResultCallback Done = WrapNative(MoveTemp(InDone));
     if (!IsPresent(ChangeRequestId))
     {
         Done(Fail(FInvoError::InvalidInput(TEXT("changeRequestId"), ChangeRequestId, TEXT("is required"))));
