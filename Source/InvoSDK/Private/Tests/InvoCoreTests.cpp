@@ -169,6 +169,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FInvoHttpTest, "InvoSDK.Core.Http", INVO_TEST_F
 bool FInvoHttpTest::RunTest(const FString& Parameters)
 {
     TSharedRef<FInvoHttp> Http = MakeShared<FInvoHttp>();
+    AddExpectedError(TEXT("Base URL must use https://"), EAutomationExpectedErrorFlags::Contains, 1);
     TestFalse(TEXT("refuses plain http"), Http->Configure(TEXT("http://invo.network")).IsEmpty());
     TestTrue(TEXT("accepts https"), Http->Configure(TEXT("https://sandbox.invo.network/sandbox/")).IsEmpty());
     TestEqual(TEXT("trailing slash trimmed"), Http->GetBaseUrl(), FString(TEXT("https://sandbox.invo.network/sandbox")));

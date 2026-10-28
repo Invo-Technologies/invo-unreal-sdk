@@ -6,6 +6,7 @@
 
 #include "InvoHostedApproval.h"
 #include "InvoSDKSettings.h"
+#include "Engine/GameInstance.h"
 #include "Misc/AutomationTest.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -123,9 +124,10 @@ bool FInvoHostedApprovalJsonTest::RunTest(const FString& Parameters)
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FInvoHostedApprovalSubsystemTest, "InvoSDK.HostedApproval.Subsystem", INVO_TEST_FLAGS)
 bool FInvoHostedApprovalSubsystemTest::RunTest(const FString& Parameters)
 {
-    // Constructed outside a game instance: no viewport, so route the prompt through the
-    // custom-UI delegates and drive it with SubmitEnrollmentDecision.
-    UInvoHostedApprovalSubsystem* Subsystem = NewObject<UInvoHostedApprovalSubsystem>();
+    // Inside a bare game instance (subsystems must be outered to one) with no world or viewport,
+    // so route the prompt through the custom-UI delegates and drive it with SubmitEnrollmentDecision.
+    UGameInstance* GameInstance = NewObject<UGameInstance>(GetTransientPackage());
+    UInvoHostedApprovalSubsystem* Subsystem = NewObject<UInvoHostedApprovalSubsystem>(GameInstance);
     Subsystem->AddToRoot();
     Subsystem->bUseBuiltInPrompt = false;
 
