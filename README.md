@@ -1,139 +1,53 @@
 <p align="center">
-  <img src="https://console.invo.network/assets/logo-e0324218.svg" alt="InvoSDK Logo" width="200"/>
+  <img src="https://console.invo.network/assets/logo-e0324218.svg" alt="INVO logo" width="200"/>
 </p>
 
-<h1 align="center">InvoSDK for Unreal Engine</h1>
+<h1 align="center">INVO Network SDK for Unreal Engine</h1>
 
 <p align="center">
-  <strong>The official Unreal Engine plugin for integrating with the Invo platform</strong>
+  <strong>One virtual currency players buy once and spend across every INVO game.</strong>
 </p>
 
 <p align="center">
   <a href="#installation">Installation</a> •
   <a href="#quick-start">Quick Start</a> •
-  <a href="#features">Features</a> •
+  <a href="#phone-approval">Phone Approval</a> •
   <a href="#api-reference">API Reference</a> •
-  <a href="#hosted-approval-on-mobile-system-browser">Hosted Approval</a> •
   <a href="#support">Support</a>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Unreal%20Engine-4.27%2B%20%7C%205.x-blue" alt="UE Version"/>
-  <img src="https://img.shields.io/badge/Platform-Windows-brightgreen" alt="Platform"/>
-  <img src="https://img.shields.io/badge/Version-1.0-orange" alt="Version"/>
-  <img src="https://img.shields.io/badge/License-Proprietary-red" alt="License"/>
+  <img src="https://img.shields.io/badge/Unreal%20Engine-5.8-blue" alt="Unreal Engine 5.8"/>
+  <img src="https://img.shields.io/badge/Platforms-Windows%20%7C%20Android%20%7C%20iOS-brightgreen" alt="Platforms"/>
+  <img src="https://img.shields.io/badge/Version-2.0-orange" alt="Version 2.0"/>
 </p>
 
 ---
 
 ## Overview
 
-InvoSDK is an enterprise-grade Unreal Engine plugin that seamlessly integrates your game with the **Invo platform** — enabling in-game currency management, item purchases, player-to-player transfers, and real-money transactions. Built with performance and ease-of-use in mind, the SDK provides both C++ and Blueprint interfaces for maximum flexibility.
+The official Unreal Engine plugin for [INVO Network](https://ourinvo.com). Sell currency packs through INVO's hosted checkout, sell in-game items, and let players send currency to friends or move it to another INVO game, with every send approved on the player's phone.
 
-### Why InvoSDK?
+- **`UInvoSubsystem`**: the whole API as a Game Instance Subsystem, in C++ and Blueprint. Every call answers once with an `FInvoResult` (`bOk`, `Data`, `Error`) carrying INVO's stable error codes.
+- **Phone approval**: a QR code on desktop (`UInvoQrCodeLibrary`, encoded in-process), the system browser on phones (`UInvoHostedApprovalSubsystem`).
+- **Error checks** in `UInvoLibrary`: Is Insufficient Balance, Is Rate Limited, Is Receiver Not Enrolled and more, so your UI never parses strings.
+- **Same rules as INVO's Unity and Godot SDKs**: https only, money calls never retried automatically, idempotency keys on every purchase and send, and no production key in a build.
+- **Automation tests** under `InvoSDK.*`.
 
-- **Production-Ready**: Battle-tested infrastructure handling millions of transactions
-- **Dual Interface**: Full C++ API with complete Blueprint exposure
-- **Async by Design**: Non-blocking HTTP operations for smooth gameplay
-- **Pre-built UI**: Ready-to-use UMG widgets for common flows
-- **Secure**: Industry-standard authentication and encryption
-
----
-
-## Architecture
-
-### System Overview
+### How calls are routed
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              YOUR GAME                                       │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                              │
-│   ┌──────────────┐     ┌──────────────────┐     ┌─────────────────────┐    │
-│   │  Blueprints  │────▶│  BP_InvoSDK      │────▶│  Pre-built UI       │    │
-│   │  (Your Game) │     │  Manager         │     │  Widgets            │    │
-│   └──────────────┘     └────────┬─────────┘     └─────────────────────┘    │
-│                                 │                                           │
-│                                 ▼                                           │
-│   ┌──────────────┐     ┌──────────────────┐     ┌─────────────────────┐    │
-│   │  C++ Game    │────▶│  UInvoSDKApi     │────▶│  UInvoSDKJson       │    │
-│   │  Code        │     │  Manager         │     │  Helpers            │    │
-│   └──────────────┘     └────────┬─────────┘     └─────────────────────┘    │
-│                                 │                                           │
-├─────────────────────────────────┼───────────────────────────────────────────┤
-│                          INVOSDK PLUGIN                                      │
-│                                 │                                           │
-│                                 ▼                                           │
-│                    ┌────────────────────────┐                               │
-│                    │   Unreal HTTP Module   │                               │
-│                    │   (Async Requests)     │                               │
-│                    └────────────┬───────────┘                               │
-│                                 │                                           │
-└─────────────────────────────────┼───────────────────────────────────────────┘
-                                  │
-                                  ▼ HTTPS
-                    ┌─────────────────────────┐
-                    │     INVO PLATFORM       │
-                    │  ┌───────────────────┐  │
-                    │  │  SDK key check    │  │
-                    │  │  X-Game-Secret-Key│  │
-                    │  └───────────────────┘  │
-                    │  ┌───────────────────┐  │
-                    │  │  API Services     │  │
-                    │  │  /api/*           │  │
-                    │  └───────────────────┘  │
-                    └─────────────────────────┘
+                        player token (safe to ship)
+  Your game ──────────────────────────────────────────▶ INVO  /api/sdk/*   balance, destinations,
+     │                                                                     pending collect, phone approval
+     │  commerce calls (store, checkout, purchase, send, transfer, claim, phone change)
+     │
+     ├── Sandbox, Development builds:  ivsdk_test_ key from your local settings ─▶ INVO sandbox
+     │
+     └── Production:  player token ─▶ YOUR game server ─▶ adds the ivsdk_live_ key ─▶ INVO
 ```
 
-### Request Flow
-
-```
-┌─────────┐    ┌──────────────┐    ┌─────────────┐    ┌───────────┐    ┌─────────┐
-│  Game   │    │ InvoRequest  │    │  Activate   │    │  HTTP     │    │  Invo   │
-│  Code   │    │  (Factory)   │    │  (Execute)  │    │  Module   │    │  API    │
-└────┬────┘    └──────┬───────┘    └──────┬──────┘    └─────┬─────┘    └────┬────┘
-     │                │                   │                 │               │
-     │  Create Node   │                   │                 │               │
-     │───────────────▶│                   │                 │               │
-     │                │                   │                 │               │
-     │                │  Configure        │                 │               │
-     │                │──────────────────▶│                 │               │
-     │                │                   │                 │               │
-     │                │                   │  Send Request   │               │
-     │                │                   │────────────────▶│               │
-     │                │                   │                 │               │
-     │                │                   │                 │  HTTPS POST   │
-     │                │                   │                 │──────────────▶│
-     │                │                   │                 │               │
-     │                │                   │                 │  JSON Response│
-     │                │                   │                 │◀──────────────│
-     │                │                   │                 │               │
-     │                │                   │  HandleResponse │               │
-     │                │                   │◀────────────────│               │
-     │                │                   │                 │               │
-     │  OnSuccess/OnFail (Delegate)       │                 │               │
-     │◀───────────────────────────────────│                 │               │
-     │                │                   │                 │               │
-```
-
-### Module Dependencies
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                       InvoSDK Module                         │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  Public Dependencies          Private Dependencies           │
-│  ┌─────────────────┐         ┌─────────────────┐            │
-│  │ Core            │         │ CoreUObject     │            │
-│  │ HTTP            │         │ Engine          │            │
-│  │ Json            │         │ Slate           │            │
-│  │ JsonUtilities   │         │ SlateCore       │            │
-│  │                 │         │ DeveloperSettings│           │
-│  └─────────────────┘         └─────────────────┘            │
-│                                                              │
-└─────────────────────────────────────────────────────────────┘
-```
+Your Platform API key never ships in a build. Shipping builds refuse direct sandbox mode.
 
 ---
 
@@ -141,311 +55,117 @@ InvoSDK is an enterprise-grade Unreal Engine plugin that seamlessly integrates y
 
 ### Prerequisites
 
-- Unreal Engine 4.27+ or Unreal Engine 5.x
-- Windows 64-bit development environment
-- Visual Studio 2019 or later (for C++ development)
-- An Invo developer account ([Register here](https://console.invo.network))
+- Unreal Engine 5.8
+- Visual Studio 2022 with the "Game development with C++" workload (Windows)
+- An INVO developer account: free sandbox keys in Test mode at [console.invo.network/test](https://console.invo.network/test)
 
-### Step 1: Download the Plugin
+### Install
 
-Download the latest release from the [Invo Developer Portal](https://console.invo.network) or clone this repository.
-
-### Step 2: Install the Plugin
-
-Copy the `InvoSDK` folder into your project's `Plugins` directory:
+Install from Fab, or copy this repository into your project's `Plugins/InvoSDK` folder:
 
 ```
 YourProject/
-├── Content/
-├── Source/
 └── Plugins/
-    └── InvoSDK/           ← Place here
-        ├── Source/
+    └── InvoSDK/
         ├── Content/
-        ├── Binaries/
+        ├── Resources/
+        ├── Source/
         └── InvoSDK.uplugin
 ```
 
-### Step 3: Enable the Plugin
+Enable **Edit > Plugins > INVO Network SDK** and restart the editor.
 
-1. Open your project in Unreal Editor
-2. Go to **Edit → Plugins**
-3. Search for "InvoSDK"
-4. Enable the plugin and restart the editor
+### Configure
 
-### Step 4: Configure the SDK
+**Project Settings > Plugins > Invo SDK** (saved to `DefaultEngine.ini`, safe to commit):
 
-The setup wizard will automatically create an `InvoSDKConfig` asset on first launch. Configure it with your credentials:
+| Setting | What it is |
+|---|---|
+| Environment | Sandbox or Production |
+| Sandbox Game ID / Production Game ID | Numeric game IDs from the console |
+| Game ID | The ID behind the `invo-sdk-<GameId>` return link for phone approval |
+| Game Server URL | Production: your server that forwards commerce calls with your `ivsdk_live_` key |
+| Player Token Endpoint | Production: your endpoint that mints player tokens (`{"token", "identity_id"}`) |
+| Checkout Session Endpoint | Production: your endpoint that creates hosted checkout sessions |
+| Game Name, Currency Name | Display only |
 
-| Field | Description | Required |
-|-------|-------------|----------|
-| `sdkKey` | Your Invo API secret key | Yes |
-| `gameId` | Your unique game identifier | Yes |
-| `gameName` | Display name for your game | Yes |
-| `playerEmail` | Current player's email | Yes |
-| `gameIconUrl` | URL to your game icon | No |
-| `gameCurrencyName` | Name of your in-game currency | No |
-| `gameCurrencyUrl` | URL to currency icon | No |
-| `gameVersion` | Your game version string | No |
-| `useProduction` | Toggle production/sandbox | Yes |
-
-> ⚠️ **Security Warning**: Never ship `sdkKey` in client builds. Use server-side authentication for production deployments.
-
----
-
-## Environments
-
-InvoSDK supports two environments for development and production use:
-
-### Sandbox (Development & Testing)
-
-```
-Host:     https://sandbox.invo.network
-API:      /sandbox/api/*
-Key:      ivsdk_test_... (sent as X-Game-Secret-Key)
-Console:  https://console.invo.network/test
-```
-
-**Always use sandbox for development and testing.** Sandbox provides:
-- Test accounts with unlimited currency
-- No real money transactions
-- Full API feature parity with production
-- Isolated data that won't affect production
-
-### Production (Live Games Only)
-
-```
-Host:     https://invo.network
-API:      /api/*
-Key:      ivsdk_live_... (sent as X-Game-Secret-Key)
-Console:  https://console.invo.network
-```
-
-> 🔒 **Important**: Only switch to production when your game is ready for release. All transactions in production involve real money.
+**Project Settings > Plugins > Invo SDK (Local)** holds the **Sandbox Platform API key** (`ivsdk_test_…`). It is saved per user (`EditorPerProjectUserSettings`), never to a file you commit, and is not read in Shipping builds. On CI, set `INVO_SANDBOX_SECRET` instead.
 
 ---
 
 ## Quick Start
 
-### Blueprint Quick Start
+### Blueprint
 
-1. **Create an API Request Node**
+1. **Get Game Instance > Invo Subsystem**.
+2. Sandbox: **Login Sandbox** (email, phone, display name). Production: **Login Via Backend** with whatever JSON your token endpoint expects.
+3. **Get Balance**, **Get Game Items**, **Open Checkout** ("4.99"), **Purchase Item**: each has an **On Done** event with an `Invo Result`. Break it: `Ok`, `Data` (JSON), `Error`.
+4. Bind **On Request Failed** once for global error UI.
 
-   In your Blueprint, right-click and search for `Invo Request` under the **InvoSDK | API** category.
-
-2. **Configure the Request**
-
-   ```
-   Base URL:  https://sandbox.invo.network
-   Endpoint:  /sandbox/api/currency-purchases/player-balance
-   Method:    GET
-   Headers:   X-Game-Secret-Key: ivsdk_test_...
-              X-Player-Email: player@example.com
-   Body:      (empty for GET)
-   ```
-
-   There is no login step and no CSRF token. The SDK key in `X-Game-Secret-Key` is the only credential.
-
-3. **Handle the Response**
-
-   Connect the `OnSuccess` and `OnFail` execution pins to your response handlers.
-
-### C++ Quick Start
+### C++
 
 ```cpp
-#include "InvoSDKApiManager.h"
-#include "InvoSDKJsonHelpers.h"
+#include "InvoSubsystem.h"
+#include "InvoLibrary.h"
 
-void AMyActor::FetchPlayerBalance()
+void AMyHUD::BeginPlay()
 {
-    TMap<FString, FString> Headers;
-    Headers.Add(TEXT("X-Game-Secret-Key"), SdkKey);   // ivsdk_test_... on sandbox; keep it server-side in production
-    Headers.Add(TEXT("X-Player-Email"), PlayerEmail);
+    Super::BeginPlay();
+    UInvoSubsystem* Invo = GetGameInstance()->GetSubsystem<UInvoSubsystem>();
 
-    UInvoSDKApiManager* Request = UInvoSDKApiManager::InvoRequest(
-        this,
-        TEXT("https://sandbox.invo.network"),
-        TEXT("/sandbox/api/currency-purchases/player-balance"),
-        Headers,
-        TEXT(""),  // Empty body for GET
-        EInvoHttpMethod::GET
-    );
-
-    Request->OnSuccess.AddDynamic(this, &AMyActor::OnBalanceReceived);
-    Request->OnFail.AddDynamic(this, &AMyActor::OnRequestFailed);
-    Request->Activate();
-}
-
-void AMyActor::OnBalanceReceived(const FString& Content, int32 StatusCode,
-                                  bool bSuccess, const FJsonObjectWrapper& Json)
-{
-    int32 Balance = UInvoSDKJsonHelpers::GetIntegerField(Json, TEXT("balance"));
-    UE_LOG(LogTemp, Log, TEXT("Player balance: %d"), Balance);
-}
-
-void AMyActor::OnRequestFailed(const FString& Content, int32 StatusCode,
-                                bool bSuccess, const FJsonObjectWrapper& Json)
-{
-    UE_LOG(LogTemp, Error, TEXT("Request failed [%d]: %s"), StatusCode, *Content);
+    Invo->GetBalanceNative([](const FInvoResult& Result)
+    {
+        if (!Result.bOk)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Balance failed: %s"), *Result.Error.ToString());
+            return;
+        }
+        // Result.Object() is the parsed JSON: {"balances": [...]}. An empty array is a new player.
+    });
 }
 ```
 
----
+### Buying an item
 
-## Features
+```cpp
+const FString RequestId = UInvoLibrary::NewClientRequestId(); // keep it: reuse it to retry this purchase
+FInvoResultDelegate OnDone;
+OnDone.BindUFunction(this, FName("OnPurchased"));
+Invo->PurchaseItem(RequestId, TEXT("sword_01"), TEXT("Iron Sword"), 1, TEXT("50"), TEXT("50"), OnDone);
+```
 
-### Core Features
+`UFUNCTION() void OnPurchased(const FInvoResult& Result)` then checks `UInvoLibrary::IsInsufficientBalance(Result.Error)` to offer a top-up with `OpenCheckout`.
 
-| Feature | Description | Blueprint | C++ |
-|---------|-------------|:---------:|:---:|
-| Player Balance | Get/update player currency balance | ✅ | ✅ |
-| Item Catalog | Fetch available items for purchase | ✅ | ✅ |
-| Item Purchase | Process item purchases | ✅ | ✅ |
-| Currency Transfer | Player-to-player transfers | ✅ | ✅ |
-| SMS Verification | Two-factor authentication | ✅ | ✅ |
-| Transaction History | View past transactions | ✅ | ✅ |
+### Money calls are never retried for you
 
-### Pre-built UI Components
-
-The SDK includes ready-to-use UMG widgets located in `Content/UI/`:
-
-| Widget Category | Description |
-|-----------------|-------------|
-| `DailyDeals/` | Daily rotating offers display |
-| `Featured/` | Featured items showcase |
-| `FeaturedBundleBox/` | Bundle promotion displays |
-| `Item/` | Individual item cards |
-| `ItemPurchase/` | Purchase confirmation flow |
-| `NavBar/` | Navigation components |
-| `QuickSend/` | Quick currency send interface |
-| `RecentPurchases/` | Purchase history display |
-| `SendCurrency/` | Currency sending flow |
-| `TransferCurrency/` | Full transfer interface |
-| `WeeklyFeaturedBundle/` | Weekly bundle promotions |
+A failed send, transfer or purchase is ambiguous about the money. Before telling the player it failed, read `GetSendStatus` / `GetTransferStatus`, or retry with the **same** `ClientRequestId` (the backend answers `DUPLICATE_REQUEST` for one already done). Reads (balance, items, status) retry on 5xx, network errors and short 429s.
 
 ---
 
-## API Reference
+## Phone approval
 
-### UInvoSDKApiManager
+Sends and transfers are approved on the player's phone. The flow is RFC 8628 (device grant):
 
-The core class for making HTTP requests to the Invo API.
+1. `InitiateSend` / `InitiateTransfer` returns a `transaction_id`.
+2. `BeginPhoneApproval(TransactionId, "send" | "transfer", DefaultApprovalChannel())` returns `device_code`, `verification_uri_complete` and `interval`.
+3. Desktop (`"qr"`): show `UInvoQrCodeLibrary::MakeQrCodeTexture(verification_uri_complete)` in an Image widget. Phones (`"app_browser"`): open it with `UInvoHostedApprovalSubsystem`, below.
+4. Poll `PollPhoneApproval(DeviceCode)` every `NextPollInterval(...)` seconds until `status` is `approved` (or `access_denied` / `expired_token`).
+5. `SettlePhoneApproval(TransactionId, Flow, DeviceCode)` moves the money. It is single use and never retried; on an error read the status first.
 
-#### InvoRequest (Static Factory)
-
-Creates and configures a new API request node.
-
-```cpp
-UFUNCTION(BlueprintCallable, Category = "InvoSDK|API")
-static UInvoSDKApiManager* InvoRequest(
-    UObject* WorldContextObject,
-    const FString& BaseUrl,
-    const FString& Endpoint,
-    const TMap<FString, FString>& Headers,
-    const FString& Body,
-    EInvoHttpMethod Method
-);
-```
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `WorldContextObject` | `UObject*` | World context for the request |
-| `BaseUrl` | `FString` | Base URL (e.g., `https://sandbox.invo.network`) |
-| `Endpoint` | `FString` | API endpoint (e.g., `/sandbox/api/currency-purchases/player-balance`) |
-| `Headers` | `TMap<FString, FString>` | HTTP headers (`X-Game-Secret-Key`, `X-Player-Email`, etc.) |
-| `Body` | `FString` | Request body (JSON string for POST/PUT) |
-| `Method` | `EInvoHttpMethod` | HTTP method (GET, POST, PUT, DELETE) |
-
-#### Delegates
+For a first-time phone the poll carries an `enrollment` block with a match code; answer it with `ConfirmPhoneEnrollment(DeviceCode, bApprove)` (see the match-code prompt below).
 
 ```cpp
-// Called on successful response (2xx status codes)
-UPROPERTY(BlueprintAssignable)
-FInvoSDKOnResponse OnSuccess;
-
-// Called on failed response (non-2xx or network error)
-UPROPERTY(BlueprintAssignable)
-FInvoSDKOnResponse OnFail;
+UTexture2D* Qr = UInvoQrCodeLibrary::MakeQrCodeTexture(VerificationUriComplete); // 8 px per module, 4-module quiet zone
+QrImage->SetBrushFromTexture(Qr);
 ```
 
-#### Delegate Signature
+The QR encoder (`Private/InvoQrCodeCore.h`, ISO/IEC 18004 byte mode) runs in the game, so the approval link never goes to a third-party QR service. It is checked bit for bit against Project Nayuki's reference encoder.
 
-```cpp
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(
-    FInvoSDKOnResponse,
-    const FString&, ResponseContent,    // Raw response body
-    int32, StatusCode,                   // HTTP status code
-    bool, bWasSuccessful,                // Network success flag
-    const FJsonObjectWrapper&, JsonObject // Parsed JSON response
-);
-```
-
-### EInvoHttpMethod
-
-Enumeration of supported HTTP methods.
-
-```cpp
-UENUM(BlueprintType)
-enum class EInvoHttpMethod : uint8
-{
-    GET     UMETA(DisplayName = "GET"),
-    POST    UMETA(DisplayName = "POST"),
-    PUT     UMETA(DisplayName = "PUT"),
-    DELETE  UMETA(DisplayName = "DELETE")
-};
-```
-
-### UInvoSDKJsonHelpers
-
-Blueprint function library for parsing JSON responses.
-
-#### GetStringField
-
-```cpp
-UFUNCTION(BlueprintPure, Category = "InvoSDK|JSON")
-static FString GetStringField(
-    const FJsonObjectWrapper& JsonWrapper,
-    const FString& FieldName
-);
-```
-
-#### GetIntegerField
-
-```cpp
-UFUNCTION(BlueprintPure, Category = "InvoSDK|JSON")
-static int32 GetIntegerField(
-    const FJsonObjectWrapper& JsonWrapper,
-    const FString& FieldName
-);
-```
-
-#### GetBoolField
-
-```cpp
-UFUNCTION(BlueprintPure, Category = "InvoSDK|JSON")
-static bool GetBoolField(
-    const FJsonObjectWrapper& JsonWrapper,
-    const FString& FieldName
-);
-```
-
-#### GetObjectsArray
-
-```cpp
-UFUNCTION(BlueprintPure, Category = "InvoSDK|JSON")
-static TArray<FJsonObjectWrapper> GetObjectsArray(
-    const FJsonObjectWrapper& JsonWrapper,
-    const FString& FieldName
-);
-```
-
----
-
-## Hosted approval on mobile (system browser)
+### Hosted approval on mobile (system browser)
 
 Transfers, sends and claims can be approved with a passkey on **Invo's hosted approval page** instead of an SMS PIN. On iOS and Android the plugin opens that page in the **system browser** and tells you when the player is back. Nothing in the plugin can move money: settlement happens on your server, with a value the client never sees.
 
-### Two halves
+#### Two halves
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
@@ -501,7 +221,7 @@ Blueprint: `Get InvoHostedApprovalSubsystem` → `Open Hosted Approval` and bind
 - `OnApprovalPageFinished` fires when the game returns to the foreground after `OpenHostedApproval` — on both platforms the `invo-sdk-<GameId>://done` navigation is what brings the game back. It means **"poll now"** — never "approved". Approved, denied and expired all return on the same bare URL; the truth is your server's poll. Nothing beyond the scheme is ever read, so a value smuggled onto the URL cannot tell the game anything.
 - Games with their own deep-link plumbing can call `HandleDeepLink(Url)` (matches only the scheme) or `NotifyApprovalPageFinished()`.
 
-### First-time phones: no prompt on mobile
+#### First-time phones: no prompt on mobile
 
 For `channel: "app_browser"` the phone running the page **is** the device that opened it, so Invo **auto-confirms** the enrolment: the poll goes straight from pending to approved and the game shows nothing. There is no "come back, answer on the game screen, reopen" dance on iOS/Android.
 
@@ -526,7 +246,7 @@ Hosted->ApplyEnrollmentStateNative(Enrollment, [this](EInvoEnrollmentDecision De
 
 Blueprint: `Apply Enrollment State` with a `Decision` event each poll tick. `ShowEnrollmentPrompt` and `ShowEnrollmentFinishing` are also callable directly. The default surface is a Slate overlay on the game viewport (`SInvoEnrollmentPrompt`) that needs no UMG asset. To draw the prompt in your own UMG, set `bUseBuiltInPrompt = false`, bind `OnEnrollmentPromptRequested(Message, bFinishing)` / `OnEnrollmentPromptHidden`, and call `SubmitEnrollmentDecision` from your buttons — the copy is passed in, so your widget only lays it out. Labels and codes come from the server and are sanitised for display (tags, control and Unicode format characters removed; the label is capped at 32 characters and quoted, codes at 64). In the finishing state `SubmitEnrollmentDecision` always delivers `Deny`, whatever a custom widget passes.
 
-### Registering the return scheme
+#### Registering the return scheme
 
 The return scheme is `invo-sdk-<GameId>`, derived from the numeric **GameId** in **Project Settings > Plugins > Invo SDK** (`DefaultEngine.ini`, `[/Script/InvoSDK.InvoSDKSettings]`, `GameId=12345`) and nothing else; the server derives the same value. The editor refuses a non-numeric value.
 
@@ -550,203 +270,86 @@ AdditionalPlistData=<key>CFBundleURLTypes</key><array><dict><key>CFBundleURLName
 
 Without it, Safari cannot open `invo-sdk-12345://done` and the player returns to the game by hand; the flow still completes because the poll is the truth. A custom scheme can be claimed by another app on Android; that is why the callback carries nothing.
 
-### Native bridges (optional)
+#### Native bridges (optional)
 
 The plugin opens the page with `FPlatformProcess::LaunchURL`: Safari on iOS, the default browser on Android. Both run WebAuthn. An `ASWebAuthenticationSession` (iOS) or Custom Tabs (Android) bridge gives a sheet that closes itself on return; the plugin does not ship one. If you add one, keep the contract: open only `https`, read nothing from the callback URL, and call `NotifyApprovalPageFinished()` when the sheet closes.
 
-### Tests
-
-`Source/InvoSDK/Private/Tests/InvoHostedApprovalTests.cpp` — Session Frontend > Automation, filter `InvoSDK.HostedApproval`, or:
-
-```
-UnrealEditor-Cmd.exe <Project>.uproject -ExecCmds="Automation RunTests InvoSDK.HostedApproval" -unattended -nopause -NullRHI
-```
 
 ---
 
-## Common Integration Patterns
+## API Reference
 
-### Authentication
+### `UInvoSubsystem`
 
-Your game authenticates with its **SDK key** (`sdkKey` in `InvoSDKConfig`), sent as the `X-Game-Secret-Key` header. Calls made for one player can instead carry a short-lived player token (`Authorization: Bearer <token>`) that your server mints with `POST /api/sdk/player-token`. There is no login step and no CSRF token: players never sign in to Invo from your game.
+| Area | Calls |
+|---|---|
+| Config | `Setup(Environment, BaseUrlOverride)`, `DefaultBaseUrl`, `IsCommerceReady`, `CommerceProblem`, `GetEnvironment`, `GetGameId` |
+| Player | `SetPlayerToken`, `LoginViaBackend`, `LoginSandbox`, `SetActivePlayer`, `GetBalance`, `GetDestinations("send" or "transfer")`, `GetPendingCollect` |
+| Phone approval | `BeginPhoneApproval`, `PollPhoneApproval`, `ConfirmPhoneEnrollment`, `SettlePhoneApproval`, `IsPastStep`, `NextPollInterval`, `DefaultApprovalChannel` |
+| Store | `GetGameItems`, `OpenCheckout(UsdAmount)`, `PurchaseItem` |
+| Send, transfer, collect | `InitiateSend`, `InitiateTransfer`, `ClaimCurrency`, `ClaimTransfer`, `GetSendStatus`, `GetTransferStatus` |
+| Phone number | `ChangePlayerPhone`, `CreatePhoneChangeRequest`, `GetPhoneChangeRequest` |
+| Events | `OnLoggedIn`, `OnBalanceUpdated`, `OnCheckoutOpened`, `OnRequestFailed` |
 
-`/auth/login` is the Invo developer console's own sign-in. It needs a browser check and a second step, so a game or script cannot use it. Do not call it from your game.
+A player token that expires mid-session (`SDK_TOKEN_EXPIRED`) is re-minted once through the Player Token Endpoint and the call is resent; concurrent calls share one refresh.
 
-Keep the SDK key on your server in production builds (see the security warning under **Configure the SDK**).
+### `FInvoResult` and `FInvoError`
 
-### Example: Item Purchase Flow (C++)
+`FInvoResult { bOk, Data, Error }`. `FInvoError { Message, Code, Status, RequestId, Body }`: `Code` is INVO's stable code (`INSUFFICIENT_BALANCE`, `RECEIVER_NOT_ENROLLED`, `KEY_FOR_OTHER_ENVIRONMENT`, …). Quote `RequestId` when contacting support.
 
-```cpp
-void AStoreManager::PurchaseItem(const FString& ItemId, const FString& ItemName,
-    int32 Quantity, double UnitPrice)
-{
-    // Build request body
-    TSharedPtr<FJsonObject> JsonBody = MakeShareable(new FJsonObject);
-    JsonBody->SetStringField(TEXT("client_request_id"), FGuid::NewGuid().ToString());  // idempotency key
-    JsonBody->SetStringField(TEXT("player_email"), PlayerEmail);
-    JsonBody->SetStringField(TEXT("player_name"), PlayerName);
-    JsonBody->SetStringField(TEXT("item_id"), ItemId);
-    JsonBody->SetStringField(TEXT("item_name"), ItemName);
-    JsonBody->SetNumberField(TEXT("item_quantity"), Quantity);
-    JsonBody->SetNumberField(TEXT("unit_price"), UnitPrice);
-    JsonBody->SetNumberField(TEXT("total_price"), UnitPrice * Quantity);
+### `UInvoLibrary`
 
-    FString BodyString;
-    TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&BodyString);
-    FJsonSerializer::Serialize(JsonBody.ToSharedRef(), Writer);
+- Validation: `IsE164Phone`, `FormatMoney`, `NewClientRequestId`, `IsValidMoney` (C++)
+- Security: `SecureBaseUrlProblem`, `KeyEnvironment`
+- Error checks: `IsTokenExpired`, `IsKeyForOtherEnvironment`, `IsReceiverNotEnrolled`, `IsInsufficientBalance`, `IsPhoneShareApprovalRequired`, `IsPhoneChangeRequiresVerification`, `IsPasskeyRecoveryCooldown`, `IsDuplicateRequest`, `IsRateLimited`, `GetRetryAfterSeconds`, `GetErrorBodyString`
 
-    // Configure headers
-    TMap<FString, FString> Headers;
-    Headers.Add(TEXT("X-Game-Secret-Key"), SdkKey);   // from your server, never shipped in the client
+### `UInvoQrCodeLibrary`
 
-    // Make request
-    UInvoSDKApiManager* Request = UInvoSDKApiManager::InvoRequest(
-        this,
-        TEXT("https://sandbox.invo.network"),
-        TEXT("/sandbox/api/item-purchases/purchase-item"),
-        Headers,
-        BodyString,
-        EInvoHttpMethod::POST
-    );
+`MakeQrCodeTexture(Text, PixelsPerModule, QuietZoneModules, DarkColor, LightColor)` and, in C++, `EncodeQrModules(Text, OutSize, OutModules)`.
 
-    Request->OnSuccess.AddDynamic(this, &AStoreManager::OnPurchaseSuccess);
-    Request->OnFail.AddDynamic(this, &AStoreManager::OnPurchaseFailed);
-    Request->Activate();
-}
-```
+### Low-level requests (1.x)
+
+`UInvoSDKApiManager::InvoRequest` (an async Blueprint node with `OnSuccess` / `OnFail`) and `UInvoSDKJsonHelpers` are kept for 1.x projects and the bundled UMG widgets. New code should use `UInvoSubsystem`, which adds the routing, validation, retries and error codes above.
 
 ---
 
-## Troubleshooting
+## Tests
 
-### Common Issues
+Session Frontend > Automation, filter `InvoSDK`, or:
 
-| Issue | Cause | Solution |
-|-------|-------|----------|
-| "Config not found!" | `InvoSDKConfig` asset missing or not loaded | Ensure the config asset exists in your project and is properly referenced |
-| "Player email not set!" | Empty `playerEmail` in config | Set the player's email in `InvoSDKConfig` or pass it directly to API calls |
-| Request timeout | Network issues or incorrect endpoint | Verify network connectivity and endpoint URLs |
-| 401 Unauthorized | Missing or wrong SDK key, or an expired player token | Check the `X-Game-Secret-Key` header (a test key on sandbox, a live key in production); mint a new player token |
-| 403 Forbidden | The game or account cannot use this call | Check the game is active and the account is in good standing in the console |
-| JSON parse errors | Malformed response | Check API endpoint and request format |
-
-### Debug Logging
-
-InvoSDK logs all requests and responses. Enable verbose logging in your project settings:
-
-1. Open `DefaultEngine.ini`
-2. Add the following:
-
-```ini
-[Core.Log]
-LogTemp=Verbose
+```
+UnrealEditor-Cmd.exe <Project>.uproject -ExecCmds="Automation RunTests InvoSDK;Quit" -unattended -nopause -NullRHI
 ```
 
-Check the Output Log in Unreal Editor for `InvoSDK Request Success` and `InvoSDK Request Failed` messages.
-
-### Network Diagnostics
-
-To verify connectivity to Invo servers:
-
-```cpp
-// Test request to verify API connectivity
-UInvoSDKApiManager* TestRequest = UInvoSDKApiManager::InvoRequest(
-    this,
-    TEXT("https://sandbox.invo.network"),
-    TEXT("/sandbox/api/health"),
-    TMap<FString, FString>(),
-    TEXT(""),
-    EInvoHttpMethod::GET
-);
-TestRequest->OnSuccess.AddDynamic(this, &AMyActor::OnConnected);
-TestRequest->OnFail.AddDynamic(this, &AMyActor::OnConnectionFailed);
-TestRequest->Activate();
-```
-
----
-
-## Best Practices
-
-### Security
-
-1. **Never expose API keys in client builds** — Use server-side authentication
-2. **Always use HTTPS** — The SDK enforces this by default
-3. **Mint player tokens on demand**: player tokens are short-lived; have your server mint a new one with `POST /api/sdk/player-token` when one expires
-4. **Validate on server** — Never trust client-side validation alone
-
-### Performance
-
-1. **Cache responses** — Store frequently-accessed data (catalogs, player info)
-2. **Batch requests** — Combine multiple API calls when possible
-3. **Handle offline gracefully** — Implement retry logic and offline queuing
-
-### User Experience
-
-1. **Show loading states** — Indicate when API calls are in progress
-2. **Handle errors gracefully** — Display user-friendly error messages
-3. **Implement optimistic UI** — Update UI immediately, reconcile with server
-
----
-
-## Migration Guide
-
-### From Previous Versions
-
-If upgrading from an earlier version of InvoSDK:
-
-1. Back up your project
-2. Remove the old `InvoSDK` plugin folder
-3. Install the new version following the [Installation](#installation) steps
-4. Update any deprecated API calls (see changelog)
-5. Regenerate project files and rebuild
+| Suite | Covers |
+|---|---|
+| `InvoSDK.Core.*` | money and phone validation, URL and key rules, error parsing, HTTP retry rules (fake transport, no network), approval helpers, QR encoding |
+| `InvoSDK.HostedApproval.*` | the hosted approval helpers, parsers and return-link handling |
 
 ---
 
 ## Support
 
-### Documentation
-
-- [Invo Platform Documentation](https://docs.invo.network)
-- [API Reference](https://docs.invo.network/api)
-- [Blueprint Tutorials](https://docs.invo.network/unreal/blueprints)
-
-### Developer Resources
-
-- [Developer Console](https://console.invo.network)
-- [Sandbox Console (test mode)](https://console.invo.network/test)
-- [Sample Projects](https://github.com/invo-network/unreal-samples)
-
-### Getting Help
-
-- **Email**: support@invo.network
-- **Discord**: [Invo Developer Community](https://discord.gg/TDRxuVTU)
-- **GitHub Issues**: Report bugs and feature requests
+- Documentation: [docs.invo.network](https://docs.invo.network)
+- Developer console: [console.invo.network](https://console.invo.network) (sandbox keys in Test mode at [console.invo.network/test](https://console.invo.network/test))
+- Email: support@ourinvo.com
+- Website: [ourinvo.com](https://ourinvo.com)
 
 ---
 
 ## Changelog
 
-### Unreleased
+### 2.0.0
 
-- **Hosted approval on mobile.** `UInvoHostedApprovalSubsystem` opens Invo's hosted approval page in the system browser (never a WebView), fires `OnApprovalPageFinished` when the game returns on `invo-sdk-<GameId>://done` (the URL carries nothing; the game polls its own server from `begin` onwards), and offers the match-code prompt on a Slate overlay or your own UMG for non-phone screens (mobile `app_browser` enrolment is auto-confirmed, no prompt). `UInvoHostedApprovalLibrary` has the pure helpers and JSON parsers; `UInvoSDKSettings` adds **Project Settings > Plugins > Invo SDK > GameId**; `InvoSDK_Android_UPL.xml` registers the Android intent-filter at package time. Automation tests under `InvoSDK.HostedApproval`. New module dependency: `DeveloperSettings`.
+- **`UInvoSubsystem`**: the full INVO API in C++ and Blueprint (player, store, checkout, item purchase, send, transfer, collect, claim, phone change, phone approval), at parity with INVO's Unity and Godot SDKs.
+- **Commerce routing**: sandbox key straight to INVO in Development builds only; production through your game server with the player token. Shipping builds refuse direct mode.
+- **`FInvoResult` / `FInvoError`** with INVO's stable error codes and the `UInvoLibrary` error checks.
+- **HTTP rules**: https only (loopback exempt), retries only for reads, redacted URLs in logs, sanitised headers, single-flight token refresh.
+- **QR codes**: `UInvoQrCodeLibrary` for desktop phone approval.
+- **Hosted approval on mobile**: `UInvoHostedApprovalSubsystem` opens INVO's hosted approval page in the system browser and returns on `invo-sdk-<GameId>://done`.
+- **Settings**: sandbox and production game IDs, game server and endpoint URLs; the sandbox key moved to per-user local settings.
+- Automation tests under `InvoSDK.Core` and `InvoSDK.HostedApproval`.
 
-### Version 1.0.0
+### 1.0.0
 
-- Initial release
-- Core API manager with async HTTP support
-- Blueprint integration for all API calls
-- JSON helper utilities
-- Pre-built UI components
-- Sandbox and production environment support
-
----
-
-## License
-
-This SDK is proprietary software. See [LICENSE](LICENSE) for terms and conditions.
-
----
-
-<p align="center">
-  <sub>Built with ❤️ by the Invo Team</sub>
-</p>
+- Initial release: `UInvoSDKApiManager`, JSON helpers, UMG widgets, sandbox and production.

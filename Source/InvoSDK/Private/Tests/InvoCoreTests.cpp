@@ -4,6 +4,7 @@
 //   UnrealEditor-Cmd.exe <Project>.uproject -ExecCmds="Automation RunTests InvoSDK.Core;Quit" -unattended -nopause -NullRHI
 
 #include "InvoLibrary.h"
+#include "InvoQrCode.h"
 #include "InvoHttp.h"
 #include "InvoSubsystem.h"
 #include "InvoTypes.h"
@@ -251,6 +252,63 @@ bool FInvoApprovalHelpersTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("first wait stated"), UInvoSubsystem::NextPollInterval(0, FString(), 3), 3);
     TestEqual(TEXT("slow down"), UInvoSubsystem::NextPollInterval(5, TEXT("slow_down"), 5), 10);
     TestEqual(TEXT("pending keeps stated"), UInvoSubsystem::NextPollInterval(10, TEXT("authorization_pending"), 5), 5);
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FInvoQrCodeTest, "InvoSDK.Core.QrCode", INVO_TEST_FLAGS)
+bool FInvoQrCodeTest::RunTest(const FString& Parameters)
+{
+    // Expected grid from Project Nayuki's reference encoder (byte mode, medium ECC, automatic mask 2).
+    static const TCHAR* Expected[] = {
+        TEXT("#######..#.###....#######"),
+        TEXT("#.....#...#..####.#.....#"),
+        TEXT("#.###.#.#.......#.#.###.#"),
+        TEXT("#.###.#.#######...#.###.#"),
+        TEXT("#.###.#.#..#.#..#.#.###.#"),
+        TEXT("#.....#.#.#.####..#.....#"),
+        TEXT("#######.#.#.#.#.#.#######"),
+        TEXT("........#.#.#...#........"),
+        TEXT("#.#####....#.####.#####.."),
+        TEXT("#..#.#.#.#.##...#..#...#."),
+        TEXT(".##...###..##.##.#...#.##"),
+        TEXT("#.###.....#...#.##.#....#"),
+        TEXT("###############..##.#.###"),
+        TEXT("#..#...#.#....#.#..#.#.#."),
+        TEXT("#.#...#..#.##.###.####.##"),
+        TEXT("#.##.#.###.#...#.#.##...#"),
+        TEXT("#...#.#.#.#####.#####.#.."),
+        TEXT("........###.#.###...##..."),
+        TEXT("#######..##..##.#.#.#.###"),
+        TEXT("#.....#.#####.#.#...##.##"),
+        TEXT("#.###.#.##.##########.#.."),
+        TEXT("#.###.#.#.##.#.####.#####"),
+        TEXT("#.###.#.#.#.###.##...##.#"),
+        TEXT("#.....#...###.###.####..#"),
+        TEXT("#######.###..###.#.######"),
+    };
+
+    int32 Size = 0;
+    TArray<bool> Modules;
+    TestTrue(TEXT("encodes"), UInvoQrCodeLibrary::EncodeQrModules(TEXT("https://docs.invo.network"), Size, Modules));
+    TestEqual(TEXT("version 2 size"), Size, 25);
+    if (Size == 25 && Modules.Num() == 25 * 25)
+    {
+        for (int32 Y = 0; Y < Size; ++Y)
+        {
+            FString Row;
+            for (int32 X = 0; X < Size; ++X)
+            {
+                Row.AppendChar(Modules[Y * Size + X] ? TEXT('#') : TEXT('.'));
+            }
+            TestEqual(FString::Printf(TEXT("row %d"), Y), Row, FString(Expected[Y]));
+        }
+    }
+
+    TestFalse(TEXT("empty refused"), UInvoQrCodeLibrary::EncodeQrModules(FString(), Size, Modules));
+    TestFalse(TEXT("too long refused"), UInvoQrCodeLibrary::EncodeQrModules(FString::ChrN(3000, TEXT('a')), Size, Modules));
+    TestEqual(TEXT("failure clears size"), Size, 0);
+    TestTrue(TEXT("largest byte payload fits"), UInvoQrCodeLibrary::EncodeQrModules(FString::ChrN(2331, TEXT('a')), Size, Modules));
+    TestEqual(TEXT("version 40"), Size, 177);
     return true;
 }
 
