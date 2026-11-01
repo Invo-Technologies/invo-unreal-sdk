@@ -8,7 +8,7 @@
 	"CreatedBy": "Invonetwork",
 	"CreatedByURL": "https://ourinvo.com",
 	"DocsURL": "https://docs.invo.network",
-	"MarketplaceURL": "",
+	"FabURL": "com.epicgames.launcher://ue/Fab/product/98d73131-74c9-4cb7-b7d1-1b98b8904e0b",
 	"SupportURL": "https://ourinvo.com",
 	"EngineVersion": "5.8.0",
 	"CanContainContent": true,
